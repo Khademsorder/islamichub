@@ -2594,7 +2594,7 @@
             location.href = 'islamic.html';
         }
 
-        function showToastMsg(msg) {
+        function showToast(msg) {
             let t = document.getElementById('qToast');
             if (!t) {
                 t = document.createElement('div'); t.id = 'qToast';
@@ -2799,7 +2799,7 @@
                 <div class="reader-surah-ar">${surah.name}</div>
                 <div class="reader-surah-info">${surah.ayahs.length} আয়াত • ${surah.revelationType === 'Meccan' ? 'মক্কী' : 'মাদানী'} • সূরা ${id}</div>
                 <div style="margin-top:20px; display:flex; justify-content:center;">
-                   <button class="tab" id="surahDownloadBtn" onclick="${isOffline ? 'showToastMsg(\'ইতিমধ্যেই সংরক্ষিত\')' : `IslamicModule.AudioManager.downloadFullSurah(${id}, ${surah.ayahs.length}, this).then(() => { if(window.currentLoadedSurah && window.currentLoadedSurah.id == ${id}) { document.getElementById('surahDownloadBtn').style.background = 'rgba(16, 185, 129, 0.2)'; document.getElementById('surahDownloadBtn').style.borderColor = '#10b981'; document.getElementById('surahDownloadBtn').querySelector('.dl-text').innerText = 'অফলাইন'; document.getElementById('surahDownloadBtn').querySelector('.material-symbols-rounded').innerText = 'offline_pin'; } })`}" 
+                   <button class="tab" id="surahDownloadBtn" onclick="${isOffline ? 'showToast(\'ইতিমধ্যেই সংরক্ষিত\')' : `IslamicModule.AudioManager.downloadFullSurah(${id}, ${surah.ayahs.length}, this).then(() => { if(window.currentLoadedSurah && window.currentLoadedSurah.id == ${id}) { document.getElementById('surahDownloadBtn').style.background = 'rgba(16, 185, 129, 0.2)'; document.getElementById('surahDownloadBtn').style.borderColor = '#10b981'; document.getElementById('surahDownloadBtn').querySelector('.dl-text').innerText = 'অফলাইন'; document.getElementById('surahDownloadBtn').querySelector('.material-symbols-rounded').innerText = 'offline_pin'; } })`}" 
                            style="background:${isOffline ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255,255,255,0.2)'}; color:white; border:1px solid ${isOffline ? '#10b981' : 'rgba(255,255,255,0.4)'}; font-size:13px; font-weight:800; padding:10px 20px; border-radius:50px; cursor:pointer; display:flex; align-items:center; gap:8px;">
                      <span class="material-symbols-rounded" style="font-size:20px;">${isOffline ? 'offline_pin' : 'download_for_offline'}</span> 
                      <span class="dl-text">${isOffline ? 'অফলাইন' : 'অফলাইন ডাউনলোড'}</span>
@@ -2977,10 +2977,10 @@
         }
 
         function jumpToHadith() {
-            const val = document.getElementById('hadithJumpInput')?.value.trim(); if (!val || isNaN(val)) { showToastMsg('সঠিক নম্বর দিন'); return; }
+            const val = document.getElementById('hadithJumpInput')?.value.trim(); if (!val || isNaN(val)) { showToast('সঠিক নম্বর দিন'); return; }
             const container = document.getElementById('ayahContent'); container.innerHTML = '<div class="ai-loading"><div class="pulse-dot"></div>হাদিস খোঁজা হচ্ছে...</div>';
             hadithBookState.offset = Math.max(0, parseInt(val) - 1);
-            appendHadithPage(container, true).then(() => setTimeout(() => { const el = document.getElementById('hadith-' + val); if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); el.style.backgroundColor = 'var(--glow)'; setTimeout(() => el.style.backgroundColor = 'var(--surface)', 2000); } else showToastMsg('হাদিস পাওয়া যায়নি'); }, 600));
+            appendHadithPage(container, true).then(() => setTimeout(() => { const el = document.getElementById('hadith-' + val); if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); el.style.backgroundColor = 'var(--glow)'; setTimeout(() => el.style.backgroundColor = 'var(--surface)', 2000); } else showToast('হাদিস পাওয়া যায়নি'); }, 600));
         }
 
         // ── Topics & Chunk Rendering ──
@@ -3014,7 +3014,7 @@
                 const topics = HADITH_TOPIC_LIST.filter(t => t.cat === activeCat); document.getElementById('topicCount').innerText = topics.length + ' বিষয়';
                 grid.innerHTML = topics.map((t, i) => {
                     const cnt = topicCounts[t.id] || 0; const has = cnt > 0;
-                    return `<div class="topic-card pattern-${(i % 3) + 1} ${has ? '' : 'topic-empty'}" onclick="${has ? `openTopic('${t.id}','${t.name.replace(/'/g, "\\")}')` : `showToastMsg('প্রথমে হাদিস বই ডাউনলোড করুন')`}" style="border-top-color:${t.color};"><div class="topic-icon" style="background:${t.color}15;">${t.icon}</div><div class="topic-name">${t.name}</div><div class="topic-cnt" style="color:${has ? t.color : 'var(--text2)'};">${has ? cnt.toLocaleString('bn-BD') + ' হাদিস' : '০ — ডাউনলোড করুন'}</div></div>`;
+                    return `<div class="topic-card pattern-${(i % 3) + 1} ${has ? '' : 'topic-empty'}" onclick="${has ? `openTopic('${t.id}','${t.name.replace(/'/g, "\\")}')` : `showToast('প্রথমে হাদিস বই ডাউনলোড করুন')`}" style="border-top-color:${t.color};"><div class="topic-icon" style="background:${t.color}15;">${t.icon}</div><div class="topic-name">${t.name}</div><div class="topic-cnt" style="color:${has ? t.color : 'var(--text2)'};">${has ? cnt.toLocaleString('bn-BD') + ' হাদিস' : '০ — ডাউনলোড করুন'}</div></div>`;
                 }).join('');
             }
         }
@@ -3092,7 +3092,7 @@
             if (isAlreadySaved) {
                 localStorage.setItem('islamic_vault', JSON.stringify(vault));
                 if (btn) { btn.style.color = 'var(--text2)'; btn.innerHTML = '<span class="material-symbols-rounded" style="font-size:20px;">bookmark_border</span>'; }
-                showToastMsg('বুকমার্ক রিমুভ করা হয়েছে!');
+                showToast('বুকমার্ক রিমুভ করা হয়েছে!');
             } else {
                 vaultCurrentItem = { type: type, id1: id1, id2: id2, btn: btn };
                 document.getElementById('vaultModal').style.display = 'flex'; renderVaultFolders();
@@ -3110,7 +3110,7 @@
         function createNewVaultFolder() {
             const input = document.getElementById('newFolderName'); const name = input.value.trim(); if (!name) return;
             const vault = safeLocalStorageJSON('islamic_vault', { "আমার ফেভারিটস": [] });
-            if (vault[name]) { showToastMsg('এই নামে ইতিমধ্যে একটি ফল্ডার আছে!'); return; }
+            if (vault[name]) { showToast('এই নামে ইতিমধ্যে একটি ফল্ডার আছে!'); return; }
             vault[name] = []; localStorage.setItem('islamic_vault', JSON.stringify(vault)); input.value = ''; renderVaultFolders();
         }
 
@@ -3119,7 +3119,7 @@
             const vault = safeLocalStorageJSON('islamic_vault', { "আমার ফেভারিটস": [] });
             if (vaultCurrentItem.type === 'quran') vault[folderName].push({ surah: vaultCurrentItem.id1, ayah: vaultCurrentItem.id2 });
             if (vaultCurrentItem.type === 'hadith') vault[folderName].push({ book: vaultCurrentItem.id1, number: vaultCurrentItem.id2 });
-            localStorage.setItem('islamic_vault', JSON.stringify(vault)); showToastMsg(`'${folderName}' ফল্ডারে সেভ হয়েছে!`);
+            localStorage.setItem('islamic_vault', JSON.stringify(vault)); showToast(`'${folderName}' ফল্ডারে সেভ হয়েছে!`);
             if (vaultCurrentItem.btn) { vaultCurrentItem.btn.style.color = 'var(--accent)'; vaultCurrentItem.btn.innerHTML = '<span class="material-symbols-rounded" style="font-size:20px;">bookmark_added</span>'; }
             document.getElementById('vaultModal').style.display = 'none';
         }
@@ -3261,7 +3261,7 @@
             if (!unlocked.includes(paraNum)) {
                 unlocked.push(paraNum);
                 localStorage.setItem('unlocked_milestones', JSON.stringify(unlocked));
-                if (typeof showToastMsg !== 'undefined') showToastMsg(`অভিনন্দন! আপনি পারা ${paraNum} সম্পন্ন করেছেন। 🎉`);
+                if (typeof showToast !== 'undefined') showToast(`অভিনন্দন! আপনি পারা ${paraNum} সম্পন্ন করেছেন। 🎉`);
                 loadKhatamData();
             }
         }
@@ -3495,7 +3495,7 @@
                             const total = window.currentLoadedSurah?.numberOfAyahs || 100;
                             playSingleAyah(last.lastSurah, last.lastAyah, total);
                         }
-                        showToastMsg('শেষ স্থান থেকে তেলাওয়াত শুরু হচ্ছে');
+                        showToast('শেষ স্থান থেকে তেলাওয়াত শুরু হচ্ছে');
                     }, 600);
                 });
             }
@@ -3521,7 +3521,7 @@
                 openSurah(last.lastSurah).then(() => {
                     setTimeout(() => {
                         IslamicModule.Player.playIndex(index >= 0 ? index : 0);
-                        showToastMsg(`সূরা ${last.lastSurah}:${last.lastAyah} থেকে শুরু হচ্ছে`);
+                        showToast(`সূরা ${last.lastSurah}:${last.lastAyah} থেকে শুরু হচ্ছে`);
                     }, 600);
                 });
             }
@@ -3593,7 +3593,7 @@
 
         function saveGroupMember() {
             const name = document.getElementById('gMemName').value.trim();
-            if (!name) { showToastMsg('নাম দিন!'); return; }
+            if (!name) { showToast('নাম দিন!'); return; }
 
             const s1 = parseInt(document.getElementById('gStartSurah').value);
             const a1 = parseInt(document.getElementById('gStartAyah').value);
@@ -3602,7 +3602,7 @@
 
             const s1Data = (window.allSurahs || []).find(s => s.number === s1);
             const s2Data = (window.allSurahs || []).find(s => s.number === s2);
-            if (!s1Data || !s2Data) { showToastMsg('ডাটা লোড হচ্ছে, একটু অপেক্ষা করুন...'); return; }
+            if (!s1Data || !s2Data) { showToast('ডাটা লোড হচ্ছে, একটু অপেক্ষা করুন...'); return; }
             const startName = s1Data.englishName;
             const endName = s2Data.englishName;
 
@@ -3764,7 +3764,7 @@
         // ── Certificate Engine ──
         async function generateCertificate() {
             const userName = prompt('সার্টিফিকেটে প্রিন্ট করার জন্য আপনার নাম লিখুন:', 'খাদেমুল ইসলাম'); if (!userName) return;
-            showToastMsg('সার্টিফিকেট তৈরি হচ্ছে...');
+            showToast('সার্টিফিকেট তৈরি হচ্ছে...');
             if (!window.html2canvas) { const script = document.createElement('script'); script.src = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"; document.head.appendChild(script); await new Promise(r => script.onload = r); }
             document.getElementById('certName').innerText = userName; document.getElementById('certDate').innerText = new Date().toLocaleDateString('en-GB');
             const exportView = document.getElementById('certificateView'); exportView.style.left = '0'; exportView.style.zIndex = '-1';
@@ -3777,18 +3777,18 @@
                     document.getElementById('downloadImgBtn').onclick = () => { const a = document.createElement('a'); a.href = imgUrl; a.download = `khatam_certificate_${Date.now()}.png`; a.click(); };
                     document.getElementById('shareImgBtn').onclick = async () => {
                         const file = new File([blob], `khatam_cert.png`, { type: 'image/png' });
-                        if (navigator.canShare && navigator.canShare({ files: [file] })) { try { await navigator.share({ files: [file], title: 'Alhamdulillah', text: 'I have completed reciting the Holy Quran!' }); } catch (e) { showToastMsg('শেয়ার করা যায়নি'); } }
-                        else { showToastMsg('আপনার ডিভাইসে শেয়ার সাপোর্ট নেই'); }
+                        if (navigator.canShare && navigator.canShare({ files: [file] })) { try { await navigator.share({ files: [file], title: 'Alhamdulillah', text: 'I have completed reciting the Holy Quran!' }); } catch (e) { showToast('শেয়ার করা যায়নি'); } }
+                        else { showToast('আপনার ডিভাইসে শেয়ার সাপোর্ট নেই'); }
                     };
                 }, 'image/png');
-            } catch (e) { exportView.style.left = '-9999px'; showToastMsg('সার্টিফিকেট তৈরিতে সমস্যা হয়েছে!'); console.error(e); }
+            } catch (e) { exportView.style.left = '-9999px'; showToast('সার্টিফিকেট তৈরিতে সমস্যা হয়েছে!'); console.error(e); }
         }
 
         function openReaderSettings() { document.getElementById('readerSettingsModal').style.display = 'flex'; }
-        function showAyahAI(s, a, ar, bn, btn) { showToastMsg('AI ব্যাখ্যা লোড হচ্ছে...'); if (window.IslamicModule?.UI?.showBackstory) window.IslamicModule.UI.showBackstory(s, a, ar, bn, btn); }
-        function showHadithAI(b, n, t, btn) { showToastMsg('AI ব্যাখ্যা লোড হচ্ছে...'); if (window.IslamicModule?.UI?.showHadithExplanation) window.IslamicModule.UI.showHadithExplanation(b, n, t, btn); }
-        function shareHadith(b, n, t) { const shareText = `*${b} - হাদিস নং ${n}*\n\n"${t.replace(/&quot;/g, '"').replace(/\\'/g, "'")}"\n\n- কুরআন ও হাদিস অ্যাপ থেকে`; if (navigator.share) navigator.share({ title: 'হাদিস শেয়ার', text: shareText }).catch(console.error); else { navigator.clipboard.writeText(shareText); showToastMsg('হাদিস কপি করা হয়েছে!'); } }
-        function openQariModal() { document.getElementById('qariModal').style.display = 'flex'; const c = document.getElementById('qariList'); c.innerHTML = ''; const qaris = IslamicModule.Quran?.getQariList() || []; const cur = IslamicModule.Quran?.getCurrentQari() || ''; qaris.forEach(q => { const d = document.createElement('div'); d.className = 'qari-opt ' + (q.id === cur ? 'active' : ''); d.innerHTML = `<span style="font-weight:800; color:var(--text);">${q.name}</span><span class="material-symbols-rounded" style="font-size:22px; color:${q.id === cur ? 'var(--accent)' : 'var(--text2)'};">${q.id === cur ? 'check_circle' : 'radio_button_unchecked'}</span>`; d.onclick = (e) => { e.stopPropagation(); IslamicModule.Quran?.setQari(q.id); closeQariModal(); showToastMsg('ক্বারী পরিবর্তন: ' + q.name); }; c.appendChild(d); }); }
+        function showAyahAI(s, a, ar, bn, btn) { showToast('AI ব্যাখ্যা লোড হচ্ছে...'); if (window.IslamicModule?.UI?.showBackstory) window.IslamicModule.UI.showBackstory(s, a, ar, bn, btn); }
+        function showHadithAI(b, n, t, btn) { showToast('AI ব্যাখ্যা লোড হচ্ছে...'); if (window.IslamicModule?.UI?.showHadithExplanation) window.IslamicModule.UI.showHadithExplanation(b, n, t, btn); }
+        function shareHadith(b, n, t) { const shareText = `*${b} - হাদিস নং ${n}*\n\n"${t.replace(/&quot;/g, '"').replace(/\\'/g, "'")}"\n\n- কুরআন ও হাদিস অ্যাপ থেকে`; if (navigator.share) navigator.share({ title: 'হাদিস শেয়ার', text: shareText }).catch(console.error); else { navigator.clipboard.writeText(shareText); showToast('হাদিস কপি করা হয়েছে!'); } }
+        function openQariModal() { document.getElementById('qariModal').style.display = 'flex'; const c = document.getElementById('qariList'); c.innerHTML = ''; const qaris = IslamicModule.Quran?.getQariList() || []; const cur = IslamicModule.Quran?.getCurrentQari() || ''; qaris.forEach(q => { const d = document.createElement('div'); d.className = 'qari-opt ' + (q.id === cur ? 'active' : ''); d.innerHTML = `<span style="font-weight:800; color:var(--text);">${q.name}</span><span class="material-symbols-rounded" style="font-size:22px; color:${q.id === cur ? 'var(--accent)' : 'var(--text2)'};">${q.id === cur ? 'check_circle' : 'radio_button_unchecked'}</span>`; d.onclick = (e) => { e.stopPropagation(); IslamicModule.Quran?.setQari(q.id); closeQariModal(); showToast('ক্বারী পরিবর্তন: ' + q.name); }; c.appendChild(d); }); }
         function closeQariModal(e) { const m = document.getElementById('qariModal'); if (e && e.target !== m) return; m.style.display = 'none'; }
 
         async function loadDownloadsList() {
@@ -3847,12 +3847,12 @@
             if (!confirm('এই হাদিস বইটি ডিলিট করবেন?')) return;
             try {
                 await IslamicModule.Hadith.clearBookCache(id);
-                showToastMsg('মুছে ফেলা হয়েছে');
+                showToast('মুছে ফেলা হয়েছে');
                 loadDownloadsList();
             } catch (e) { console.error(e); }
         }
-        async function deleteSingleSurahCache(id) { if (!confirm('অডিও ডিলিট করবেন?')) return; try { const keys = await caches.keys(); for (const k of keys) { const cache = await caches.open(k); const reqs = await cache.keys(); for (const r of reqs) if (r.url.includes('/' + id + '/') || r.url.match(new RegExp('\\b' + id + '\\b'))) await cache.delete(r); } let d = safeLocalStorageJSON('offline_surahs', []); d = d.filter(x => x != id); localStorage.setItem('offline_surahs', JSON.stringify(d)); loadDownloadsList(); showToastMsg('মুছে ফেলা হয়েছে'); } catch (e) { } }
-        function clearQuranCache() { if (!confirm('সব ডিলিট করবেন?')) return; caches.keys().then(n => Promise.all(n.map(x => caches.delete(x)))).then(() => { localStorage.removeItem('offline_surahs'); loadDownloadsList(); showToastMsg('সব মুছে ফেলা হয়েছে'); }); }
+        async function deleteSingleSurahCache(id) { if (!confirm('অডিও ডিলিট করবেন?')) return; try { const keys = await caches.keys(); for (const k of keys) { const cache = await caches.open(k); const reqs = await cache.keys(); for (const r of reqs) if (r.url.includes('/' + id + '/') || r.url.match(new RegExp('\\b' + id + '\\b'))) await cache.delete(r); } let d = safeLocalStorageJSON('offline_surahs', []); d = d.filter(x => x != id); localStorage.setItem('offline_surahs', JSON.stringify(d)); loadDownloadsList(); showToast('মুছে ফেলা হয়েছে'); } catch (e) { } }
+        function clearQuranCache() { if (!confirm('সব ডিলিট করবেন?')) return; caches.keys().then(n => Promise.all(n.map(x => caches.delete(x)))).then(() => { localStorage.removeItem('offline_surahs'); loadDownloadsList(); showToast('সব মুছে ফেলা হয়েছে'); }); }
 
         // ── Reader Control Functions ──
         function showReader() {
@@ -3946,11 +3946,11 @@
             const repeat = parseInt(document.getElementById('repeatAyahInput').value) || 1;
             const delay = parseInt(document.getElementById('delayAyahInput').value) || 0;
             localStorage.setItem('audio_hook_settings', JSON.stringify({ repeat, delay }));
-            showToastMsg('অডিও সেটিংস সেভ হয়েছে');
+            showToast('অডিও সেটিংস সেভ হয়েছে');
         }
 
         async function startBatchSync() {
-            if (!navigator.onLine) { showToastMsg('ইন্টারনেট কানেকশন নেই!'); return; }
+            if (!navigator.onLine) { showToast('ইন্টারনেট কানেকশন নেই!'); return; }
             if (!confirm('এটি ১১৪টি সূরা এবং ৫টি হাদিস গ্রন্থ ডাউনলোড করবে। আপনি কি নিশ্চিত?')) return;
 
             toggleSidebar();
@@ -3963,7 +3963,7 @@
 
             await IslamicModule.OfflineManager.syncAll((pct, msg) => {
                 if (pct === -1) {
-                    showToastMsg(msg);
+                    showToast(msg);
                     modal.style.display = 'none';
                     return;
                 }
@@ -3974,7 +3974,7 @@
                 if (pct === 100) {
                     setTimeout(() => {
                         modal.style.display = 'none';
-                        showToastMsg('সব ডাটা এখন অফলাইনে পাওয়া যাবে।');
+                        showToast('সব ডাটা এখন অফলাইনে পাওয়া যাবে।');
                         loadDownloadsList();
                     }, 2000);
                 }
@@ -3986,14 +3986,14 @@
                 document.getElementById('readerSettingsModal').style.display = 'none';
                 playSingleAyah(window.currentLoadedSurah.number, 1, window.currentLoadedSurah.numberOfAyahs);
             } else if (currentReaderType === 'hadith') {
-                showToastMsg('এই মোডে এই বৈশিষ্ট্য ব্যবহারযোগ্য নয়');
+                showToast('এই মোডে এই বৈশিষ্ট্য ব্যবহারযোগ্য নয়');
             }
         }
 
         function resumeLastPlayback() {
             const lastPlayback = localStorage.getItem('islamic_last_playback');
             if (!lastPlayback) {
-                showToastMsg('কোনো পূর্ববর্তী প্লেব্যাক নেই');
+                showToast('কোনো পূর্ববর্তী প্লেব্যাক নেই');
                 return;
             }
             try {
@@ -4011,7 +4011,7 @@
                     });
                 }
             } catch (e) {
-                showToastMsg('প্লেব্যাক রিসুম করতে সমস্যা হয়েছে');
+                showToast('প্লেব্যাক রিসুম করতে সমস্যা হয়েছে');
             }
         }
 
@@ -4019,13 +4019,13 @@
             const input = document.getElementById('jumpAyahInput');
             const ayahNum = parseInt(input.value);
             if (!ayahNum || ayahNum < 1) {
-                showToastMsg('বৈধ আয়াত নং লিখুন');
+                showToast('বৈধ আয়াত নং লিখুন');
                 return;
             }
             if (currentReaderType === 'surah' && window.currentLoadedSurah) {
                 const total = window.currentLoadedSurah.numberOfAyahs;
                 if (ayahNum > total) {
-                    showToastMsg(`আয়াত নং ${ayahNum} পাওয়া যায়নি (মোট ${total} আয়াত)`);
+                    showToast(`আয়াত নং ${ayahNum} পাওয়া যায়নি (মোট ${total} আয়াত)`);
                     return;
                 }
                 playSingleAyah(window.currentLoadedSurah.number, ayahNum, total);
@@ -4036,14 +4036,14 @@
                 }
                 document.getElementById('readerSettingsModal').style.display = 'none';
             } else if (currentReaderType === 'hadith') {
-                showToastMsg('এই মোডে এই বৈশিষ্ট্য ব্যবহারযোগ্য নয়');
+                showToast('এই মোডে এই বৈশিষ্ট্য ব্যবহারযোগ্য নয়');
             }
         }
         // Back Button Lock for Khatam Mode
         window.addEventListener('popstate', function (event) {
             if (IslamicModule.Player && IslamicModule.Player.isKhatamMode && isReaderOpen) {
                 history.pushState(null, document.title, location.href);
-                showToastMsg('খতম মোডে থাকাকালীন ব্যাক বাটন লক করা হয়েছে। অডিও বন্ধ করে ব্যাক প্রেস করুন।');
+                showToast('খতম মোডে থাকাকালীন ব্যাক বাটন লক করা হয়েছে। অডিও বন্ধ করে ব্যাক প্রেস করুন।');
             }
         });
 
