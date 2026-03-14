@@ -118,7 +118,18 @@ Analyze the provided image and return a **valid JSON object** with the following
         let lastError = '';
 
         const userKey = localStorage.getItem(USER_GEMINI_KEY);
-        const userKeysList = JSON.parse(localStorage.getItem('user_gemini_keys_list') || '[]');
+        let userKeysList = [];
+        try {
+            const stored = localStorage.getItem('user_gemini_keys_list');
+            if (stored) {
+                const parsed = JSON.parse(stored);
+                userKeysList = Array.isArray(parsed) ? parsed : [parsed];
+            }
+        } catch (e) {
+            const raw = localStorage.getItem('user_gemini_keys_list');
+            if (raw && raw.trim().startsWith('AIza')) userKeysList = [raw.trim()];
+        }
+
 
         const allKeys = [];
         if (userKey) allKeys.push(userKey);
