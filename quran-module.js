@@ -294,30 +294,38 @@
       const cached = await getAICache(cacheKey);
       if (cached) return cached;
 
-      const prompt = `You are an expert Islamic Scholar and Bengali language expert. I need a detailed analysis for Surah ${surah}, Ayah ${ayah}.
+      const prompt = `আপনি একজন অত্যন্ত প্রাজ্ঞ এবং বিশ্বখ্যাত মুফাসসির ও ইসলামি স্কলার। সূরা ${surah}, আয়াত নং ${ayah}-এর একটি অত্যন্ত গভীর, প্রিমিয়াম এবং আধ্যাত্মিক ব্যাখ্যা প্রদান করুন।
 
-**CRITICAL LANGUAGE RULE: Write EVERYTHING in pure Bengali (বাংলা) script. Absolutely NO English, NO Banglish (Roman + Bengali mix), NO Latin characters. All Arabic words must be phonetically written using Bengali alphabet characters only (অ, আ, ব, ক, র etc., NOT 'a', 'b', 'k', 'r'). This is the most important rule.**
+**ভাষা ও বানান সংক্রান্ত কঠোর নিয়ম (STRICTLY FOLLOW):**
+- উত্তরটি সম্পূর্ণ বিশুদ্ধ বাংলায় হতে হবে।
+- কোনো পরিস্থিতিতেই ইংরেজি অক্ষর বা "বাংলিশ" ব্যবহার করা যাবে না।
+- আরবির বৈজ্ঞানিক উচ্চারণ অবশ্যই সম্পূর্ণ বাংলা হরফে দিতে হবে।
 
-**Response Structure (STRICTLY FOLLOW):**
+**উত্তরের কাঠামো (Structure):**
 
-1. **বাংলা উচ্চারণ (Bengali Pronunciation):**
-   Write the COMPLETE Arabic verse phonetically in pure Bengali script only.
-   Example format: "বিসমিল্লাহির রাহমানির রাহিম" (NOT "Bismillahir Rahmanir Rahim")
-   Every single word MUST be in Bengali characters. Do not skip any word.
-   
-2. **প্রতিটি শব্দের অর্থ (Word-by-Word Meaning):**
-   List each Arabic word followed by its Bengali meaning. Format: (আরবি শব্দ) = (বাংলা অর্থ).
-   
-3. **গভীর প্রেক্ষাপট (Backstory & Tafsir):** 
-   Historical context, reason for revelation (Sabab al-Nuzul), and spiritual significance in detail.
-   
-4. **উপসংহার (Conclusion):**
-   Concise lesson for modern life.
-   
-**Verse Data:**
-- Arabic: ${arabic}
-- Bengali Meaning: ${bangla}
-- Language: Pure Bengali only. Tone: Compassionate and scholarly.`;
+১. 📖 **বিশুদ্ধ বাংলা উচ্চারণ:**
+   সম্পূর্ণ আয়াতটির সাবলীল বাংলা উচ্চারণ (যেমন: "আলহামদু লিল্লাহি রব্বিল আলামীন")।
+
+২. 🔍 **শাব্দিক সহজ অর্থ:**
+   আয়াতের প্রতিটি গুরুত্বপূর্ণ শব্দের মূল অর্থ সহজভাবে উপস্থাপন করা।
+
+৩. 📜 **শান-এ-নুযুল ও ঐতিহাসিক প্রেক্ষাপট:**
+   আয়াতটি নাযিলের পটভূমি এবং ঐতিহাসিক কারণ বিস্তারিত আলোচনা করুন।
+
+৪. 💎 **গূঢ় অর্থ ও তাত্ত্বিক মাসায়েল:**
+   আয়াতের গভীর তত্ত্ব, মাসায়েল এবং আল্লাহ তাআলার বিশেষ শিক্ষা কী ছিল তা ব্যাখ্যা করুন।
+
+৫. 💡 **আধ্যাত্মিক ও জাগতিক শিক্ষা:**
+   আমাদের প্রাত্যহিক জীবনের জন্য এখান থেকে কী নসিহত পাওয়া যায় এবং এটি কীভাবে আমাদের ঈমানকে মজবুত করবে।
+
+৬. 📚 **রেফারেন্স:**
+   তাফসীরে ইবনে কাসীর, জালালাইন বা অন্য কোনো সহিহ কিতাবের উদ্ধৃতি দিন।
+
+**তথ্যাদি:**
+- আরব্য টেক্সট: ${arabic}
+- বাংলা সাধারণ অনুবাদ: ${bangla}
+
+আপনার উত্তর যেন একজন দক্ষ আলিমের বয়ানের মতো মার্জিত এবং হৃদয়স্পর্শী হয়।`;
 
       const result = await QuranAPI._robustAICall(prompt);
       if (result) {
@@ -569,21 +577,20 @@
       const cached = await getAICache(cacheKey);
       if (cached) return cached;
 
-      const prompt = `তুমি একজন বিশেষজ্ঞ মুহাদ্দিস (হাদিস বিশারদ)। নিচের হাদিসটি যাচাই করো:
+      const prompt = `আপনি একজন বিশেষজ্ঞ "মুহাদ্দিস" (হাদিস বিশারদ)। নিচের হাদিসটি অত্যন্ত গভীর ও কারিগরিভাবে যাচাই করুন:
 
-হাদিস:
-${bangla}
+**হাদিসের তথ্য:**
+- গ্রন্থ: ${book}
+- হাদিস নম্বর: ${number}
+- মূল পাঠ: ${bangla}
 
-গ্রন্থ: ${book}
-হাদিস নম্বর: ${number}
+**আপনার যাচাইয়ের মাপকাঠি:**
+১. **সনদ ও মতন বিশ্লেষণ:** হাদিসের সনদ (Chain) এবং পাঠ (Text) সহিহ কি না?
+২. **হাদিসের স্তর:** এটি কি সহিহ, হাসান, যয়িফ নাকি মাওদু? বিস্তারিত কারণসহ উল্লেখ করুন।
+৩. **বিদ্বানদের অভিমত:** ইমাম বুখারী, মুসলিম বা অন্যান্য নির্ভরযোগ্য মুহাদ্দিসগণের এই হাদিস সম্পর্কে কী মত?
+৪. **ফাইনাল রায় (Verdict):** এটি কি আমলযোগ্য?
 
-যাচাই করো:
-1. এই হাদিসের সনদ (chain) সহিহ কি না?
-2. হাদিসের শ্রেণী (সহিহ, হাসান, যয়ীফ, মাওদু) কী?
-3. হাদিসের বিষয়বস্তু কুরআনের সাথে সাংঘর্ষিক কি না?
-4. হাদিসের রাবীদের নাম ও তাদের নির্ভরযোগ্যতা।
-
-সংক্ষিপ্ত উত্তর দাও বাংলায়।`;
+আপনার উত্তরটি যেন একজন অভিজ্ঞ মুহাদ্দিসের মতো প্রামাণিক এবং সুস্পষ্ট হয়। হেডার ও বোল্ড টেক্সট ব্যবহার করে সুন্দরভাবে উপস্থাপন করুন।`;
 
       const result = await QuranAPI._robustAICall(prompt);
       if (result) {
@@ -598,17 +605,20 @@ ${bangla}
       const cached = await getAICache(cacheKey);
       if (cached) return cached;
 
-      const prompt = `তুমি একজন প্রাজ্ঞ ইসলামিক পণ্ডিত। নিচের হাদিসটির বিস্তারিত ব্যাখ্যা ও শিক্ষা দাও:
-গ্রন্থ: ${book}
-হাদিস নম্বর: ${number}
-হাদিসের বর্ণনা: ${text}
+      const prompt = `আপনি একজন প্রাজ্ঞ ইসলামি পণ্ডিত এবং আধ্যাত্মিক নসিহতকারী। নিচের হাদিসটির একটি "হৃদয়স্পর্শী ও তাত্ত্বিক" ব্যাখ্যা প্রদান করুন:
 
-উত্তরে অবশ্যই নিচের বিষয়গুলো অন্তর্ভুক্ত করবে:
-১. হাদিসের মূল শিক্ষা ও তাৎপর্য
-২. বর্তমান সময়ে এই হাদিসের গুরুত্ব ও প্রয়োগ
-৩. আমাদের জীবনের জন্য প্রয়োজনীয় নসিহত
+**হাদিস পরিচিতি:**
+- গ্রন্থ: ${book}
+- হাদিস নম্বর: ${number}
+- হাদিসের বর্ণনা: ${text}
 
-উত্তর বাংলায়, গুছিয়ে এবং সুন্দর পয়েন্ট আকারে দেবে।`;
+**উত্তরে অবশ্যই যা থাকতে হবে:**
+১. **মূল শিক্ষা:** হাদিসটির মূল মেইল বা সারমর্ম কী?
+২. **আধ্যাত্মিক তাৎপর্য:** এই হাদিসটি কীভাবে আমাদের আত্মা ও ঈমান গঠনে সাহায্য করে?
+৩. **আধুনিক প্রয়োগ:** বর্তমান যুগে বা সমাজের প্রেক্ষাপটে এই হাদিসটির প্রয়োগ ও গুরুত্ব।
+৪. **পারিবারিক ও সামাজিক নসিহত:** এই হাদিস থেকে আমাদের জীবনের জন্য প্রয়োজনীয় উপদেশ।
+
+উত্তরটি সাবলীল বাংলায়, সুন্দর প্যারাগ্রাফ এবং বোল্ড হেডিং ব্যবহার করে প্রিমিয়াম ফরম্যাটে দিন।`;
 
       const result = await QuranAPI._robustAICall(prompt);
       if (result) {
@@ -712,7 +722,6 @@ ${bangla}
         }
         btn.innerHTML = '<span class="material-symbols-rounded">task_alt</span> সেভড';
         if (typeof showToast !== 'undefined') showToast("সম্পূর্ণ সূরা অফলাইনের জন্য সেভ করা হয়েছে!");
-        else if (typeof showToastMsg !== 'undefined') showToastMsg("সম্পূর্ণ সূরা অফলাইনের জন্য সেভ করা হয়েছে!");
         else alert("সম্পূর্ণ সূরা অফলাইনের জন্য সেভ করা হয়েছে!");
       } catch (error) {
         console.error("Surah Download Error:", error);
@@ -1154,7 +1163,7 @@ ${bangla}
           console.error("[Audio] Too many consecutive errors. Stopping.");
           AdvancedAudioPlayer.stop();
           AdvancedAudioPlayer._errorCount = 0;
-          if (typeof showToastMsg !== 'undefined') showToastMsg("অডিও লোড করতে সমস্যা হচ্ছে। প্লেব্যাক বন্ধ করা হয়েছে।");
+          if (typeof showToast !== 'undefined') showToast("অডিও লোড করতে সমস্যা হচ্ছে। প্লেব্যাক বন্ধ করা হয়েছে।");
         } else {
           AdvancedAudioPlayer._isErrorSkipping = true;
           setTimeout(AdvancedAudioPlayer.playNext, 1500);
@@ -1204,7 +1213,7 @@ ${bangla}
           if (pastEnd) {
             console.log("[Audio] Range end reached. Stopping playback.");
             AdvancedAudioPlayer.stop();
-            if (typeof showToastMsg !== 'undefined') showToastMsg("নির্বাচিত পরিসীমার তিলাওয়াত শেষ হয়েছে।");
+            if (typeof showToast !== 'undefined') showToast("নির্বাচিত পরিসীমার তিলাওয়াত শেষ হয়েছে।");
             return;
           }
         }
