@@ -85,7 +85,17 @@ RESPONSE FORMAT (JSON only):
 
     async function callAPI(base64Audio, mimeType) {
         const userKey = localStorage.getItem('user_gemini_api_key');
-        const userKeysList = JSON.parse(localStorage.getItem('user_gemini_keys_list') || '[]');
+        let userKeysList = [];
+        try {
+            const stored = localStorage.getItem('user_gemini_keys_list');
+            if (stored) {
+                const parsed = JSON.parse(stored);
+                userKeysList = Array.isArray(parsed) ? parsed : [parsed];
+            }
+        } catch (e) {
+            const raw = localStorage.getItem('user_gemini_keys_list');
+            if (raw && raw.trim().startsWith('AIza')) userKeysList = [raw.trim()];
+        }
         const userModel = localStorage.getItem('user_gemini_model') || MODEL;
 
         const allKeys = [];
