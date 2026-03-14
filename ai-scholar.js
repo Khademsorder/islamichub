@@ -1,1760 +1,950 @@
-(function (global) {
-  const DB_NAME = 'IslamicKnowledgeCoreStore';
-  let dbInstance = null;
+const AIScholarService = (() => {
+    // Keys are now managed via secrets.js (local-only) or window.APP_SECRETS
+    // This prevents API key exposure on GitHub.
+    const DEFAULT_GEMINI_KEYS = (window.APP_SECRETS && window.APP_SECRETS.GEMINI_KEYS) || [];
+    const OPENROUTER_KEY = (window.APP_SECRETS && window.APP_SECRETS.OPENROUTER_KEY) || '';
+    const OPENROUTER_MODELS = [
+        'stepfun/step-3.5-flash:free',
+        'arcee-ai/trinity-large-preview:free',
+        'nvidia/nemotron-3-super-120b-a12b:free',
+        'nvidia/nemotron-3-nano-30b-a3b:free'
+    ];
 
-  const QARI_LIST = [
-    { id: 'ar.alafasy', name: 'Mishary Alafasy' },
-    { id: 'ar.husary', name: 'Husary' },
-    { id: 'ar.parhizgar', name: 'Parhizgar' },
-    { id: 'ar.minshawi', name: 'Minshawi' }
-  ];
-  let currentQari = localStorage.getItem('preferredQari') || 'ar.alafasy';
-  // Validation: if stored qari is no longer in list, reset to default
-  if (!QARI_LIST.some(q => q.id === currentQari)) {
-    currentQari = 'ar.alafasy';
-    localStorage.setItem('preferredQari', currentQari);
-  }
-  let autoAdvanceEnabled = localStorage.getItem('autoAdvance') === 'true';
+    const SYSTEM_PROMPT = `আপনি একজন অত্যন্ত প্রাজ্ঞ এবং অভিজ্ঞ "সিনিয়র মুফতি" ও ইসলামি স্কলার। আপনার কাজ হলো কুরআন ও সুন্নাহর বিশুদ্ধ জ্ঞান দিয়ে ব্যবহারকারীকে সাহায্য করা। আপনার উত্তরগুলো হতে হবে মার্জিত, তথ্যসমৃদ্ধ এবং প্রিমিয়াম কোয়ালিটির।
 
-  const PARA_MAP = {
-    1: [{ surah: 1, start: 1, end: 7 }, { surah: 2, start: 1, end: 141 }],
-    2: [{ surah: 2, start: 142, end: 252 }],
-    3: [{ surah: 2, start: 253, end: 286 }, { surah: 3, start: 1, end: 92 }],
-    4: [{ surah: 3, start: 93, end: 200 }, { surah: 4, start: 1, end: 23 }],
-    5: [{ surah: 4, start: 24, end: 147 }],
-    6: [{ surah: 4, start: 148, end: 176 }, { surah: 5, start: 1, end: 81 }],
-    7: [{ surah: 5, start: 82, end: 120 }, { surah: 6, start: 1, end: 110 }],
-    8: [{ surah: 6, start: 111, end: 165 }, { surah: 7, start: 1, end: 87 }],
-    9: [{ surah: 7, start: 88, end: 206 }, { surah: 8, start: 1, end: 40 }],
-    10: [{ surah: 8, start: 41, end: 75 }, { surah: 9, start: 1, end: 92 }],
-    11: [{ surah: 9, start: 93, end: 129 }, { surah: 10, start: 1, end: 109 }, { surah: 11, start: 1, end: 5 }],
-    12: [{ surah: 11, start: 6, end: 123 }, { surah: 12, start: 1, end: 52 }],
-    13: [{ surah: 12, start: 53, end: 111 }, { surah: 13, start: 1, end: 43 }, { surah: 14, start: 1, end: 52 }],
-    14: [{ surah: 15, start: 1, end: 99 }, { surah: 16, start: 1, end: 128 }],
-    15: [{ surah: 17, start: 1, end: 111 }, { surah: 18, start: 1, end: 74 }],
-    16: [{ surah: 18, start: 75, end: 110 }, { surah: 19, start: 1, end: 98 }, { surah: 20, start: 1, end: 135 }],
-    17: [{ surah: 21, start: 1, end: 112 }, { surah: 22, start: 1, end: 78 }],
-    18: [{ surah: 23, start: 1, end: 118 }, { surah: 24, start: 1, end: 64 }, { surah: 25, start: 1, end: 20 }],
-    19: [{ surah: 25, start: 21, end: 77 }, { surah: 26, start: 1, end: 227 }, { surah: 27, start: 1, end: 55 }],
-    20: [{ surah: 27, start: 56, end: 93 }, { surah: 28, start: 1, end: 88 }, { surah: 29, start: 1, end: 45 }],
-    21: [{ surah: 29, start: 46, end: 69 }, { surah: 30, start: 1, end: 60 }, { surah: 31, start: 1, end: 34 }, { surah: 32, start: 1, end: 30 }, { surah: 33, start: 1, end: 30 }],
-    22: [{ surah: 33, start: 31, end: 73 }, { surah: 34, start: 1, end: 54 }, { surah: 35, start: 1, end: 45 }, { surah: 36, start: 1, end: 27 }],
-    23: [{ surah: 36, start: 28, end: 83 }, { surah: 37, start: 1, end: 182 }, { surah: 38, start: 1, end: 88 }, { surah: 39, start: 1, end: 31 }],
-    24: [{ surah: 39, start: 32, end: 75 }, { surah: 40, start: 1, end: 85 }, { surah: 41, start: 1, end: 46 }],
-    25: [{ surah: 41, start: 47, end: 54 }, { surah: 42, start: 1, end: 53 }, { surah: 43, start: 1, end: 89 }, { surah: 44, start: 1, end: 59 }, { surah: 45, start: 1, end: 37 }],
-    26: [{ surah: 46, start: 1, end: 35 }, { surah: 47, start: 1, end: 38 }, { surah: 48, start: 1, end: 29 }, { surah: 49, start: 1, end: 18 }, { surah: 50, start: 1, end: 45 }, { surah: 51, start: 1, end: 30 }],
-    27: [{ surah: 51, start: 31, end: 60 }, { surah: 52, start: 1, end: 49 }, { surah: 53, start: 1, end: 62 }, { surah: 54, start: 1, end: 55 }, { surah: 55, start: 1, end: 78 }, { surah: 56, start: 1, end: 96 }, { surah: 57, start: 1, end: 29 }],
-    28: [{ surah: 58, start: 1, end: 22 }, { surah: 59, start: 1, end: 24 }, { surah: 60, start: 1, end: 13 }, { surah: 61, start: 1, end: 14 }, { surah: 62, start: 1, end: 11 }, { surah: 63, start: 1, end: 11 }, { surah: 64, start: 1, end: 18 }, { surah: 65, start: 1, end: 12 }, { surah: 66, start: 1, end: 12 }],
-    29: [{ surah: 67, start: 1, end: 30 }, { surah: 68, start: 1, end: 52 }, { surah: 69, start: 1, end: 52 }, { surah: 70, start: 1, end: 44 }, { surah: 71, start: 1, end: 28 }, { surah: 72, start: 1, end: 28 }, { surah: 73, start: 1, end: 20 }, { surah: 74, start: 1, end: 56 }, { surah: 75, start: 1, end: 40 }, { surah: 76, start: 1, end: 31 }, { surah: 77, start: 1, end: 50 }],
-    30: [{ surah: 78, start: 1, end: 40 }, { surah: 79, start: 1, end: 46 }, { surah: 80, start: 1, end: 42 }, { surah: 81, start: 1, end: 29 }, { surah: 82, start: 1, end: 19 }, { surah: 83, start: 1, end: 36 }, { surah: 84, start: 1, end: 25 }, { surah: 85, start: 1, end: 22 }, { surah: 86, start: 1, end: 17 }, { surah: 87, start: 1, end: 19 }, { surah: 88, start: 1, end: 26 }, { surah: 89, start: 1, end: 30 }, { surah: 90, start: 1, end: 20 }, { surah: 91, start: 1, end: 15 }, { surah: 92, start: 1, end: 21 }, { surah: 93, start: 1, end: 11 }, { surah: 94, start: 1, end: 8 }, { surah: 95, start: 1, end: 8 }, { surah: 96, start: 1, end: 19 }, { surah: 97, start: 1, end: 5 }, { surah: 98, start: 1, end: 8 }, { surah: 99, start: 1, end: 8 }, { surah: 100, start: 1, end: 11 }, { surah: 101, start: 1, end: 11 }, { surah: 102, start: 1, end: 8 }, { surah: 103, start: 1, end: 3 }, { surah: 104, start: 1, end: 9 }, { surah: 105, start: 1, end: 5 }, { surah: 106, start: 1, end: 4 }, { surah: 107, start: 1, end: 7 }, { surah: 108, start: 1, end: 3 }, { surah: 109, start: 1, end: 6 }, { surah: 110, start: 1, end: 3 }, { surah: 111, start: 1, end: 5 }, { surah: 112, start: 1, end: 4 }, { surah: 113, start: 1, end: 5 }, { surah: 114, start: 1, end: 6 }]
-  };
+**নির্দেশনাবলী (অবশ্যই পালনীয়):**
 
-  const HADITH_TOPICS = [
-    { id: 'iman', name: 'ঈমান ও আকীদা', keywords: ['ঈমান', 'আকীদা', 'তাওহীদ', 'শিরক', 'কুফর', 'মুনাফিক', 'আল্লাহ', 'রাসূল', 'ফেরেশতা', 'কিতাব', 'আখিরাত', 'তকদির', 'ভাগ্য'] },
-    { id: 'ilm', name: 'ইল্ম ও জ্ঞান', keywords: ['ইল্ম', 'জ্ঞান', 'শিক্ষা', 'আলিম', 'মুহাদ্দিস', 'ফকীহ', 'মাদরাসা', 'দারস', 'তালিব'] },
-    { id: 'taharah', name: 'পবিত্রতা', keywords: ['পবিত্র', 'ওযু', 'গোসল', 'তায়াম্মুম', 'নাপাক', 'হায়েজ', 'নিফাস', 'ইস্তিনজা', 'মিসওয়াক'] },
-    { id: 'salat', name: 'নামাজ', keywords: ['নামাজ', 'সালাত', 'ফরজ', 'সুন্নত', 'নফল', 'ওয়াক্ত', 'রুকু', 'সিজদা', 'তাশাহহুদ', 'সালাম', 'আযান', 'ইকামত', 'জামাত', 'মসজিদ', 'কিবলা', 'ইমাম', 'মুক্তাদি', 'কসর', 'জুমা', 'ঈদ', 'জানাজা', 'তাহাজ্জুদ', 'ইশরাক', 'চাশত', 'তারাবীহ', 'বিতর'] },
-    { id: 'zakat', name: 'জাকাত ও সদকা', keywords: ['জাকাত', 'সদকা', 'ফিতরা', 'দান', 'সাওয়াব', 'গরীব', 'মিসকিন', 'ইবনুস সাবীল'] },
-    { id: 'sawm', name: 'রোজা', keywords: ['রোজা', 'সিয়াম', 'ইফতার', 'সেহরি', 'রমজান', 'শাওয়াল', 'আশুরা', 'আরাফা', 'কাজা', 'কাফফারা'] },
-    { id: 'hajj', name: 'হজ্জ ও উমরাহ', keywords: ['হজ্জ', 'উমরাহ', 'কাবা', 'তাওয়াফ', 'সাফা', 'মারওয়া', 'মীকাত', 'ইহরাম', 'আরাফাত', 'মুযদালিফা', 'মিনা', 'জামরাত', 'কুরবানী', 'সায়ী'] },
-    { id: 'nikah', name: 'বিবাহ ও পরিবার', keywords: ['বিবাহ', 'নিকাহ', 'স্ত্রী', 'স্বামী', 'সন্তান', 'তালাক', 'খুলা', 'ইদ্দত', 'মোহর', 'যিহার', "লি'আন"] },
-    { id: 'tijarah', name: 'ব্যবসা ও লেনদেন', keywords: ['ক্রয়', 'বিক্রয়', 'ব্যবসা', 'লেনদেন', 'সুদ', 'ঘুষ', 'ইজারা', 'ওয়াকফ', 'উত্তরাধিকার', 'মীরাস', 'ঋণ', 'দেনা', 'প্রতিশ্রুতি'] },
-    { id: 'jihad', name: 'জিহাদ ও রাজনীতি', keywords: ['জিহাদ', 'যুদ্ধ', 'খিলাফত', 'ইমামত', 'শাসক', 'প্রজা', 'নেতা', 'সেনা', 'গনীমত', 'ফায়'] },
-    { id: 'atima', name: 'খাদ্য ও পানীয়', keywords: ['খাদ্য', 'পানীয়', 'হালাল', 'হারাম', 'জবাই', 'শিকার', 'দুধ', 'মধু'] },
-    { id: 'libas', name: 'পোশাক ও সাজসজ্জা', keywords: ['পোশাক', 'কাপড়', 'সতর', 'পর্দা', 'হিজাব', 'সোনা', 'রেশম', 'আংটি', 'মেহেদি'] },
-    { id: 'adab', name: 'আদব ও শিষ্টাচার', keywords: ['আদব', 'আখলাক', 'শিষ্টাচার', 'সালাম', 'মুসাফাহা', 'হাঁচি', 'হাই তোলা', 'বসা', 'শোয়া', 'ঘুম'] },
-    { id: 'dua', name: 'দোয়া ও যিকির', keywords: ['দোয়া', 'প্রার্থনা', 'যিকির', 'তাসবীহ', 'তাহলীল', 'তাকবীর', 'তাহমীদ', 'ইস্তিগফার', 'দরূদ'] },
-    { id: 'tibb', name: 'চিকিৎসা ও রোগ', keywords: ['রোগ', 'চিকিৎসা', 'ঔষধ', 'ঝাড়ফুঁক', 'রুকইয়াহ', 'মৃত্যু', 'জানাযা', 'কবর'] },
-    { id: 'fitan', name: 'ফিতনা ও কিয়ামত', keywords: ['ফিতনা', 'দাজ্জাল', 'ইয়াজুজ-মাজুজ', 'কিয়ামত', 'মৃত্যু', 'কবর', 'হাশর', 'জান্নাত', 'জাহান্নাম'] },
-    { id: 'tafsir', name: 'তাফসীর ও কুরআন', keywords: ['তাফসীর', 'কুরআন', 'আয়াত', 'সূরা', 'নাযিল', 'ওহী'] },
-    { id: 'akhlaq', name: 'নৈতিকতা ও চরিত্র', keywords: ['ভালোবাসা', 'ঘৃণা', 'হিংসা', 'অহংকার', 'বিনয়', 'ক্ষমা', 'রাগ', 'ধৈর্য', 'সত্য', 'মিথ্যা'] }
-  ];
+১. **ভাষা:** সর্বদা পরিষ্কার এবং শুদ্ধ বাংলায় উত্তর দিন। কোনো "বাংলিশ" (ইংরেজি অক্ষরে বাংলা) ব্যবহার করবেন না।
+২. **উচ্চারণ:** কোনো দোয়ার উচ্চারণ দিলে তা অবশ্যই বাংলা হরফে দেবেন।
+৩. **গঠন (Format):**
+   - প্রথমে ২-৩ বাক্যে একটি গভীর ও সারগর্ভ ভূমিকা দিন।
+   - পয়েন্ট করার জন্য (•) চিহ্নের পরিবর্তে সুন্দর ইমোজি বা নম্বর ব্যবহার করুন।
+   - গুরুত্বপূর্ণ শব্দগুলো **বোল্ড** করুন।
+৪. **বিভাগ (Sections):** উত্তরের প্রাসঙ্গিকতা অনুযায়ী নিচের হেডারগুলো ব্যবহার করুন:
+    📖 **কুরআন থেকে:** (সংশ্লিষ্ট আয়াতের অর্থ ও তাফসীর)
+    📚 **হাদিস থেকে:** (সহিহ হাদিসের রেফারেন্স ও শিক্ষা)
+    💡 **আধ্যাত্মিক শিক্ষা:** (জীবনমুখী ও ঈমান বৃদ্ধিকারী নসিহত)
+    ⚠️ **সতর্কতা ও ভুল সংশোধন:** (ভুল ধারণা বা বিদআত সম্পর্কে সতর্কতা)
+    ✅ **আমল ও সমাধান:** (বাস্তব জীবনে কার্যকরী পরামর্শ)
 
-  function setQari(qariId) {
-    if (QARI_LIST.some(q => q.id === qariId)) {
-      currentQari = qariId;
-      localStorage.setItem('preferredQari', qariId);
+৫. **মান (Quality):** আপনার উত্তর যেন একজন সাধারণ চ্যাটবটের মতো না হয়ে একজন অভিজ্ঞ স্কলারের মতো হয়। গভীরতা, নির্ভরযোগ্যতা এবং সহানুভূতি বজায় রাখুন।`;
+
+    const CHAT_HISTORY_KEY = 'ai_chat_history';
+    const RESPONSE_CACHE_KEY = 'ai_response_cache';
+    const USER_GEMINI_KEY = 'user_gemini_api_key';
+    const USER_GEMINI_MODEL = 'user_gemini_model';
+    const USER_GEMINI_KEYS_LIST = 'user_gemini_keys_list';
+    const USER_OPENROUTER_KEY = 'user_openrouter_key';
+    const USER_OPENROUTER_MODELS = 'user_openrouter_models';
+
+    // Islamic Green Theme Colors
+    const THEME = {
+        primary: '#0A5438',
+        primaryLight: '#059669',
+        primaryDark: '#064E3B',
+        accent: '#10b981',
+        surface: '#f0fdf4',
+        background: '#E8F5E9',
+        text: '#064E3B'
+    };
+
+    // Quick suggestions for users
+    const QUICK_QUESTIONS = [
+        { q: 'নামাজের গুরুত্ব', icon: 'mosque' },
+        { q: 'রমজানের নিয়ম', icon: 'nights_stay' },
+        { q: 'জাকাতের বিধান', icon: 'volunteer_activism' },
+        { q: 'হজ্জের ফরজ', icon: 'kaaba' },
+        { q: 'তওবার পথ', icon: 'favorite' }
+    ];
+
+    function getUserKey() {
+        return localStorage.getItem(USER_GEMINI_KEY);
     }
-  }
 
-  function toggleAutoAdvance() {
-    autoAdvanceEnabled = !autoAdvanceEnabled;
-    localStorage.setItem('autoAdvance', autoAdvanceEnabled);
-    return autoAdvanceEnabled;
-  }
+    function saveUserKey(key) {
+        localStorage.setItem(USER_GEMINI_KEY, key);
+    }
 
+    function getUserModel() {
+        // Strict usage as requested: naming as gemini-2.5-flash-lite
+        return localStorage.getItem(USER_GEMINI_MODEL) || 'gemini-2.5-flash-lite';
+    }
 
-  // --- AI CACHE ---
-  async function getAICache(key) {
-    try {
-      const cache = await getFromDB('keyval', 'isom_ai_cache') || {};
-      if (cache[key] && (Date.now() - cache[key].time < 7 * 24 * 60 * 60 * 1000)) { // 7 days cache
-        return cache[key].response;
-      }
-      return null;
-    } catch (e) { return null; }
-  }
+    function saveUserModel(model) {
+        localStorage.setItem(USER_GEMINI_MODEL, model);
+    }
 
-  async function setAICache(key, response) {
-    try {
-      const cache = await getFromDB('keyval', 'isom_ai_cache') || {};
-      cache[key] = { response, time: Date.now() };
-
-      // Limit cache size to 100 items
-      const keys = Object.keys(cache);
-      if (keys.length > 100) {
-        delete cache[keys[0]];
-      }
-      await saveToDB('keyval', 'isom_ai_cache', cache);
-    } catch (e) { }
-  }
-
-  async function initDB() {
-    return new Promise((resolve, reject) => {
-      const req = indexedDB.open(DB_NAME, 4);
-      req.onupgradeneeded = e => {
-        const db = e.target.result;
-        if (!db.objectStoreNames.contains('surahs')) db.createObjectStore('surahs', { keyPath: 'id' });
-        if (!db.objectStoreNames.contains('ayat')) db.createObjectStore('ayat', { keyPath: 'key' });
-        if (!db.objectStoreNames.contains('hadith')) db.createObjectStore('hadith', { keyPath: 'key' });
-        if (!db.objectStoreNames.contains('keyval')) db.createObjectStore('keyval', { keyPath: 'id' });
-      };
-      req.onsuccess = e => { dbInstance = e.target.result; resolve(dbInstance); };
-      req.onerror = e => reject(e);
-    });
-  }
-
-  async function getFromDB(storeName, key) {
-    if (!dbInstance) await initDB();
-    return new Promise(resolve => {
-      const tx = dbInstance.transaction(storeName, 'readonly');
-      const req = tx.objectStore(storeName).get(key);
-      req.onsuccess = () => resolve(req.result ? req.result.data : null);
-      req.onerror = () => resolve(null);
-    });
-  }
-
-  async function saveToDB(storeName, key, data, isComplete = false) {
-    if (!dbInstance) await initDB();
-    return new Promise((resolve, reject) => {
-      const tx = dbInstance.transaction(storeName, 'readwrite');
-      const obj = { id: key, key: key, data: data }; // both id and key for compatibility
-      if (isComplete) obj.isComplete = true;
-      const req = tx.objectStore(storeName).put(obj);
-      req.onsuccess = () => resolve();
-      req.onerror = () => reject();
-    });
-  }
-
-  async function deleteFromDB(storeName, keyPattern) {
-    if (!dbInstance) await initDB();
-    return new Promise((resolve, reject) => {
-      const tx = dbInstance.transaction(storeName, 'readwrite');
-      const store = tx.objectStore(storeName);
-      const request = store.openCursor();
-      request.onsuccess = (event) => {
-        const cursor = event.target.result;
-        if (cursor) {
-          if (String(cursor.key).startsWith(keyPattern)) cursor.delete();
-          cursor.continue();
-        } else resolve();
-      };
-      request.onerror = reject;
-    });
-  }
-
-  // --- QURAN API ---
-  const QuranAPI = {
-    getQariList: () => QARI_LIST,
-    getCurrentQari: () => currentQari,
-    setQari: setQari,
-    getAutoAdvance: () => autoAdvanceEnabled,
-    toggleAutoAdvance: toggleAutoAdvance,
-    _editionId: (entry) => entry?.edition?.identifier || '',
-    _byEdition: (entries, wanted) => entries?.find(x => QuranAPI._editionId(x) === wanted) || null,
-
-    _fetchEditions: async (path, editionsCsv) => {
-      const url = `https://api.alquran.cloud/v1/${path}/editions/${editionsCsv}`;
-      const res = await fetch(url);
-      const json = await res.json();
-      if (json.code !== 200 || !Array.isArray(json.data)) throw new Error("Edition fetch failed");
-      return json.data;
-    },
-
-    clearSurahCache: async (surahId) => {
-      await deleteFromDB('surahs', `${surahId}`);
-      await deleteFromDB('ayat', `${surahId}_`);
-    },
-
-    clearAllSurahCache: async () => {
-      await deleteFromDB('surahs', '');
-      await deleteFromDB('ayat', '');
-    },
-
-    getSurah: async (surahId) => {
-      // Fix: One-time force clear to revert back to original English transliteration
-      if (localStorage.getItem('quran_transliteration_v4') !== 'true') {
-        await QuranAPI.clearAllSurahCache();
-        localStorage.setItem('quran_transliteration_v4', 'true');
-      }
-
-      // Check cache first
-      if (!dbInstance) await initDB();
-      const tx = dbInstance.transaction('surahs', 'readonly');
-      const req = tx.objectStore('surahs').get(surahId);
-
-      const cached = await new Promise(r => {
-        req.onsuccess = () => r(req.result);
-        req.onerror = () => r(null);
-      });
-
-      if (cached && cached.isComplete) return cached.data;
-
-      try {
-        const audioEdition = currentQari;
-        const editions = await QuranAPI._fetchEditions(
-          `surah/${surahId}`,
-          `quran-uthmani,bn.bengali,bn.transliteration,en.sahih,en.transliteration,${audioEdition}`
-        );
-
-        const bn_tr = QuranAPI._byEdition(editions, 'bn.transliteration');
-        const ar = QuranAPI._byEdition(editions, 'quran-uthmani') || editions[0];
-        const bn = QuranAPI._byEdition(editions, 'bn.bengali') || editions.find(x => QuranAPI._editionId(x).startsWith('bn.'));
-        const en = QuranAPI._byEdition(editions, 'en.sahih') || editions.find(x => QuranAPI._editionId(x).startsWith('en.'));
-        const tr = QuranAPI._byEdition(editions, 'en.transliteration');
-        const aud = QuranAPI._byEdition(editions, audioEdition) || editions.find(x => QuranAPI._editionId(x).startsWith('ar.'));
-        if (!ar) throw new Error("Surah not found");
-
-        const data = {
-          id: surahId,
-          name: ar.name,
-          englishName: ar.englishName,
-          revelationType: ar.revelationType,
-          ayahs: []
-        };
-
-        for (let i = 0; i < ar.ayahs.length; i++) {
-          data.ayahs.push({
-            numberInSurah: ar.ayahs[i].numberInSurah,
-            arabic: ar.ayahs[i].text,
-            bangla: bn?.ayahs?.[i]?.text || '',
-            english: en?.ayahs?.[i]?.text || '',
-            transliteration: tr?.ayahs?.[i]?.text || '',
-            bangla_transliteration: bn_tr?.ayahs?.[i]?.text || '',
-            audio: aud?.ayahs?.[i]?.audio || ''
-          });
-        }
-
-        await saveToDB('surahs', surahId, data, true);
-        return data;
-      } catch (e) {
-        console.error("Error fetching full Surah:", e);
-        // Fallback to minimal data if needed, but return null for caller to handle
-        return null;
-      }
-    },
-
-    getMetadata: async () => {
-      const cached = await getFromDB('surahs', 'metadata');
-      if (cached) return cached;
-      try {
-        const res = await fetch('https://api.alquran.cloud/v1/surah');
-        const json = await res.json();
-        if (json.code === 200) {
-          // Add Bengali names if available or use a static mapping if needed
-          // For now just return the data
-          await saveToDB('surahs', 'metadata', json.data);
-          return json.data;
-        }
-        return [];
-      } catch (e) {
-        return [];
-      }
-    },
-
-    getQariList: () => QARI_LIST,
-    getCurrentQari: () => currentQari,
-    setQari,
-
-    // Default API Keys for AI features
-    // Keys are now managed via secrets.js or window.APP_SECRETS
-    DEFAULT_AI_KEYS: (window.APP_SECRETS && window.APP_SECRETS.GEMINI_KEYS) || [],
-    OPENROUTER_MODELS: [
-      'stepfun/step-3.5-flash:free',
-      'arcee-ai/trinity-large-preview:free',
-      'nvidia/nemotron-3-super-120b-a12b:free',
-      'nvidia/nemotron-3-nano-30b-a3b:free'
-    ],
-
-    // AI Backstory (Modified Prompt for detail context)
-    getAyahBackstory: async (surah, ayah, arabic, bangla) => {
-
-      // Check cache first
-      const cacheKey = `ayah_story_${surah}_${ayah}`;
-      const cached = await getAICache(cacheKey);
-      if (cached) return cached;
-
-      const prompt = `আপনি একজন অত্যন্ত প্রাজ্ঞ এবং বিশ্বখ্যাত মুফাসসির ও ইসলামি স্কলার। সূরা ${surah}, আয়াত নং ${ayah}-এর একটি অত্যন্ত গভীর, প্রিমিয়াম এবং আধ্যাত্মিক ব্যাখ্যা প্রদান করুন।
-
-**ভাষা ও বানান সংক্রান্ত কঠোর নিয়ম (STRICTLY FOLLOW):**
-- উত্তরটি সম্পূর্ণ বিশুদ্ধ বাংলায় হতে হবে।
-- কোনো পরিস্থিতিতেই ইংরেজি অক্ষর বা "বাংলিশ" ব্যবহার করা যাবে না।
-- আরবির বৈজ্ঞানিক উচ্চারণ অবশ্যই সম্পূর্ণ বাংলা হরফে দিতে হবে।
-
-**উত্তরের কাঠামো (Structure):**
-
-১. 📖 **বিশুদ্ধ বাংলা উচ্চারণ:**
-   সম্পূর্ণ আয়াতটির সাবলীল বাংলা উচ্চারণ (যেমন: "আলহামদু লিল্লাহি রব্বিল আলামীন")।
-
-২. 🔍 **শাব্দিক সহজ অর্থ:**
-   আয়াতের প্রতিটি গুরুত্বপূর্ণ শব্দের মূল অর্থ সহজভাবে উপস্থাপন করা।
-
-৩. 📜 **শান-এ-নুযুল ও ঐতিহাসিক প্রেক্ষাপট:**
-   আয়াতটি নাযিলের পটভূমি এবং ঐতিহাসিক কারণ বিস্তারিত আলোচনা করুন।
-
-৪. 💎 **গূঢ় অর্থ ও তাত্ত্বিক মাসায়েল:**
-   আয়াতের গভীর তত্ত্ব, মাসায়েল এবং আল্লাহ তাআলার বিশেষ শিক্ষা কী ছিল তা ব্যাখ্যা করুন।
-
-৫. 💡 **আধ্যাত্মিক ও জাগতিক শিক্ষা:**
-   আমাদের প্রাত্যহিক জীবনের জন্য এখান থেকে কী নসিহত পাওয়া যায় এবং এটি কীভাবে আমাদের ঈমানকে মজবুত করবে।
-
-৬. 📚 **রেফারেন্স:**
-   তাফসীরে ইবনে কাসীর, জালালাইন বা অন্য কোনো সহিহ কিতাবের উদ্ধৃতি দিন।
-
-**তথ্যাদি:**
-- আরব্য টেক্সট: ${arabic}
-- বাংলা সাধারণ অনুবাদ: ${bangla}
-
-আপনার উত্তর যেন একজন দক্ষ আলিমের বয়ানের মতো মার্জিত এবং হৃদয়স্পর্শী হয়।`;
-
-      const result = await QuranAPI._robustAICall(prompt);
-      if (result) {
-        setAICache(cacheKey, result);
-        return result;
-      }
-      return "বিস্তারিত লোড করতে সমস্যা হয়েছে। পরে আবার চেষ্টা করুন।";
-    },
-
-    _robustAICall: async (prompt) => {
-      const model = localStorage.getItem('user_gemini_model') || 'gemini-2.5-flash-lite';
-      const userKey = localStorage.getItem('user_gemini_api_key');
-      const userKeysList = JSON.parse(localStorage.getItem('user_gemini_keys_list') || '[]');
-      const orKey = localStorage.getItem('user_openrouter_key') || (window.APP_SECRETS && window.APP_SECRETS.OPENROUTER_KEY) || '';
-
-      const allKeys = [];
-      if (userKey) allKeys.push(userKey);
-      userKeysList.forEach(k => { if (!allKeys.includes(k)) allKeys.push(k); });
-
-      // Shuffle system keys
-      const shuffledSystem = [...QuranAPI.DEFAULT_AI_KEYS].sort(() => 0.5 - Math.random());
-      shuffledSystem.forEach(k => { if (!allKeys.includes(k)) allKeys.push(k); });
-
-      // 1. Try All Gemini Keys
-      for (const key of allKeys) {
+    function getUserKeysList() {
         try {
-          const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`, {
+            const data = localStorage.getItem(USER_GEMINI_KEYS_LIST);
+            return data ? JSON.parse(data) : [];
+        } catch (e) { return []; }
+    }
+
+    function saveUserKeysList(list) {
+        localStorage.setItem(USER_GEMINI_KEYS_LIST, JSON.stringify(list));
+    }
+
+    function getOpenRouterKey() {
+        return localStorage.getItem(USER_OPENROUTER_KEY) || OPENROUTER_KEY;
+    }
+
+    function saveOpenRouterKey(key) {
+        localStorage.setItem(USER_OPENROUTER_KEY, key);
+    }
+
+    function getOpenRouterModelsList() {
+        try {
+            const data = localStorage.getItem(USER_OPENROUTER_MODELS);
+            return data ? JSON.parse(data) : OPENROUTER_MODELS;
+        } catch (e) { return OPENROUTER_MODELS; }
+    }
+
+    function saveOpenRouterModelsList(list) {
+        localStorage.setItem(USER_OPENROUTER_MODELS, JSON.stringify(list));
+    }
+
+    function exportConfig() {
+        const config = {
+            model: getUserModel(),
+            geminiKeysList: getUserKeysList(),
+            openRouterKey: localStorage.getItem(USER_OPENROUTER_KEY)
+        };
+        const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'ai-scholar-config.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showToast('Export Successful!');
+    }
+
+    function importConfig() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json';
+        input.onchange = (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (re) => {
+                try {
+                    const config = JSON.parse(re.target.result);
+                    if (config.model) saveUserModel(config.model);
+                    if (config.geminiKeysList) saveUserKeysList(config.geminiKeysList);
+                    if (config.openRouterKey) saveOpenRouterKey(config.openRouterKey || '');
+                    if (config.openRouterModels) saveOpenRouterModelsList(config.openRouterModels);
+
+                    showToast('Import Successful! ✓', 'success');
+                    const modal = document.getElementById('aiKeyModal');
+                    if (modal) {
+                        modal.remove();
+                        showKeyInput();
+                    }
+                } catch (err) {
+                    showToast('Invalid JSON file', 'error');
+                }
+            };
+            reader.readAsText(file);
+        };
+        input.click();
+    }
+
+    function getHistory() {
+        try {
+            const data = localStorage.getItem(CHAT_HISTORY_KEY);
+            return data ? JSON.parse(data) : [];
+        } catch (e) {
+            console.error("Error loading chat history:", e);
+            return [];
+        }
+    }
+
+    function saveHistory(history) {
+        try {
+            const trimmed = history.slice(-50);
+            localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(trimmed));
+        } catch (e) {
+            console.error("Error saving chat history:", e);
+        }
+    }
+
+    function clearHistory() {
+        localStorage.removeItem(CHAT_HISTORY_KEY);
+        localStorage.removeItem(RESPONSE_CACHE_KEY);
+    }
+
+
+
+    function getCache() {
+        try {
+            const data = localStorage.getItem(RESPONSE_CACHE_KEY);
+            return data ? JSON.parse(data) : {};
+        } catch (e) {
+            return {};
+        }
+    }
+
+    function saveCache(cache) {
+        try {
+            localStorage.setItem(RESPONSE_CACHE_KEY, JSON.stringify(cache));
+        } catch (e) { }
+    }
+
+    function getCachedResponse(question) {
+        if (window.AeroUltra) {
+            const cached = AeroUltra.getAICache()[question.toLowerCase().trim().substring(0, 100)];
+            return cached ? cached.response : null;
+        }
+        const cache = getCache();
+        const key = question.toLowerCase().trim().substring(0, 100);
+        return cache[key] || null;
+    }
+
+    function setCachedResponse(question, response) {
+        if (window.AeroUltra) {
+            AeroUltra.setAICache(question, response);
+            return;
+        }
+        const cache = getCache();
+        const key = question.toLowerCase().trim().substring(0, 100);
+        cache[key] = { response, timestamp: Date.now() };
+        const keys = Object.keys(cache);
+        if (keys.length > 100) {
+            delete cache[keys[0]];
+        }
+        saveCache(cache);
+    }
+
+    function getCacheSize() {
+        const cache = getCache();
+        return Object.keys(cache).length;
+    }
+
+    async function callGeminiApi(apiKey, message, history) {
+        const model = getUserModel();
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+        const messages = [
+            { role: "user", parts: [{ text: SYSTEM_PROMPT + "\n\nUser Question: " + message }] }
+        ];
+
+        const response = await fetch(apiUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-          });
-          const data = await res.json();
-          if (data?.candidates?.[0]?.content?.parts?.[0]?.text) return data.candidates[0].content.parts[0].text;
-        } catch (e) { }
-      }
+            body: JSON.stringify({ contents: messages }),
+        });
 
-      // 2. Fallback to OpenRouter
-      if (orKey) {
-        for (const orModel of QuranAPI.OPENROUTER_MODELS) {
-          try {
-            const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${orKey}`,
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({
-                model: orModel,
-                messages: [{ role: "user", content: prompt }]
-              })
+        if (!response.ok) throw new Error(`Gemini API failed: ${response.status}`);
+
+        const data = await response.json();
+        return data.candidates[0].content.parts[0].text || 'দুঃখিত, কোনো উত্তর পাওয়া যায়নি।';
+    }
+
+    async function callOpenRouter(message, history) {
+        const apiUrl = 'https://openrouter.ai/api/v1/chat/completions';
+        const apiKey = getOpenRouterKey();
+        const models = getOpenRouterModelsList();
+
+        for (const model of models) {
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${apiKey}`,
+                        'Content-Type': 'application/json',
+                        'HTTP-Referer': 'https://jubosongho.com',
+                        'X-Title': 'Islamic Hub Web',
+                    },
+                    body: JSON.stringify({
+                        model: model,
+                        messages: [
+                            { role: "system", content: SYSTEM_PROMPT },
+                            { role: "user", content: message }
+                        ]
+                    })
+                });
+
+                const data = await response.json();
+                if (data.choices && data.choices[0]) {
+                    return data.choices[0].message.content;
+                }
+            } catch (e) {
+                console.warn(`OpenRouter Model ${model} failed, trying next...`);
+            }
+        }
+        throw new Error('All OpenRouter models failed');
+    }
+
+    async function sendMessage(message) {
+        const cached = getCachedResponse(message);
+        if (cached) {
+            console.log('Using cached response');
+            return { text: cached.response, success: true, cached: true };
+        }
+
+        let responseText = 'কোনো AI সার্ভিস কাজ করছে না।';
+        let success = false;
+        let apiKeyUsed = null;
+
+        const userKey = getUserKey();
+        const userKeysList = getUserKeysList();
+        const orKey = getOpenRouterKey();
+        const hasDefaultKeys = DEFAULT_GEMINI_KEYS.length > 0 || OPENROUTER_KEY.length > 0;
+
+        if (!userKey && userKeysList.length === 0 && !hasDefaultKeys && !orKey) {
+            return {
+                text: '⚠️ কোনো API কী (API Key) সেট করা নেই। দয়া করে সেটিংস থেকে আপনার Gemini API কী দিন অথবা secrets.js ফাইলটি কনফিগার করুন।',
+                success: false,
+                errorType: 'MISSING_KEYS'
+            };
+        }
+
+        // 1. Try Individual User Key
+        if (userKey && userKey.length > 10) {
+            try {
+                responseText = await callGeminiApi(userKey, message, []);
+                apiKeyUsed = 'User individual Key';
+                success = true;
+            } catch (e) { console.warn('User Gemini Key failed'); }
+        }
+
+        // 2. Try User Multi-Keys List (Rotation)
+        if (!success && userKeysList.length > 0) {
+            for (const key of userKeysList) {
+                try {
+                    responseText = await callGeminiApi(key, message, []);
+                    apiKeyUsed = 'User Multi-Key List';
+                    success = true;
+                    break;
+                } catch (e) { console.warn('User Multi-Key failed'); }
+            }
+        }
+
+        // 3. Try Default System Keys
+        if (!success) {
+            const _shuffledKeys = [...DEFAULT_GEMINI_KEYS].sort(() => 0.5 - Math.random());
+            for (const key of _shuffledKeys) {
+                try {
+                    responseText = await callGeminiApi(key, message, []);
+                    apiKeyUsed = 'System Rotation Key';
+                    success = true;
+                    break;
+                } catch (e) { console.warn('System Key failed'); }
+            }
+        }
+
+        // 4. Try OpenRouter (User or System)
+        if (!success) {
+            try {
+                responseText = await callOpenRouter(message, []);
+                apiKeyUsed = 'OpenRouter';
+                success = true;
+            } catch (e) { console.error('OpenRouter failed'); }
+        }
+
+        if (success) {
+            setCachedResponse(message, responseText);
+        }
+
+        console.log(`AI Response received. Used: ${apiKeyUsed || 'None'}`);
+        return { text: responseText, success: success, cached: false };
+    }
+
+    // Format answer with colors and structure
+    function formatAnswer(text) {
+        if (!text) return '';
+
+        let html = text;
+
+        // Convert newlines to proper breaks
+        html = html.replace(/\n/g, '<br>');
+
+        // Format bold text **text** → <strong>text</strong>
+        html = html.replace(/\*\*(.*?)\*\*/g, '<strong style="color:#0A5438;">$1</strong>');
+
+        // Format bullet points
+        html = html.replace(/[•·]\s*(.*?)(?=<br>|$)/g,
+            '<div style="display:flex;gap:8px;margin:6px 0;"><span style="color:#10b981;font-size:18px;">●</span><span>$1</span></div>');
+
+        // Format numbered points
+        html = html.replace(/(\d+)\.\s*(.*?)(?=<br>|$)/g,
+            '<div style="display:flex;gap:8px;margin:6px 0;"><span style="background:#0A5438;color:white;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;">$1</span><span>$2</span></div>');
+
+        // Format section headers with icons
+        const sections = [
+            { pattern: /📖\s*(\*\*|)?কুরআন থেকে:?(\*\*|)?/gi, color: '#059669', bg: '#d1fae5' },
+            { pattern: /📚\s*(\*\*|)?হাদিস থেকে:?(\*\*|)?/gi, color: '#6d28d9', bg: '#ede9fe' },
+            { pattern: /💡\s*(\*\*|)?গুরুত্ব:?(\*\*|)?/gi, color: '#d97706', bg: '#fef3c7' },
+            { pattern: /⚠️\s*(\*\*|)?সতর্কতা:?(\*\*|)?/gi, color: '#dc2626', bg: '#fee2e2' },
+            { pattern: /✅\s*(\*\*|)?উপায়:?(\*\*|)?/gi, color: '#0A5438', bg: '#d1fae5' },
+            { pattern: /🎯\s*(\*\*|)?উপসংহার:?(\*\*|)?/gi, color: '#0A5438', bg: '#d1fae5' },
+            { pattern: /📜\s*(\*\*|)?শান-এ-নুযুল ও ঐতিহাসিক প্রেক্ষাপট:?(\*\*|)?/gi, color: '#059669', bg: '#d1fae5' },
+            { pattern: /💡\s*(\*\*|)?আধ্যাত্মিক শিক্ষা:?(\*\*|)?/gi, color: '#d97706', bg: '#fef3c7' },
+            { pattern: /🔍\s*(\*\*|)?শাব্দic সহজ অর্থ:?(\*\*|)?/gi, color: '#0A5438', bg: '#d1fae5' },
+            { pattern: /💎\s*(\*\*|)?গূঢ় অর্থ ও তাত্ত্বিক মাসায়েল:?(\*\*|)?/gi, color: '#10b981', bg: '#f0fdf4' }
+        ];
+
+        sections.forEach(section => {
+            html = html.replace(section.pattern,
+                `<div style="margin:12px 0 8px 0;padding:8px 12px;background:${section.bg};border-radius:8px;border-left:4px solid ${section.color};font-weight:700;color:${section.color};">$&</div>`);
+        });
+
+        return html;
+    }
+
+    // Copy functionality
+    function copyToClipboard(text) {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(() => {
+                showToast('কপি হয়েছে! ✓');
+            }).catch(() => {
+                fallbackCopy(text);
             });
-            const data = await res.json();
-            if (data.choices?.[0]?.message?.content) return data.choices[0].message.content;
-          } catch (e) { }
+        } else {
+            fallbackCopy(text);
         }
-      }
-
-      return null;
     }
-  };
 
-  // --- HADITH API ---
-  const HadithAPI = {
-    // CDN fallback URLs for Hadith API
-    _hadithUrls: (bookId) => [
-      `https://cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@1/editions/ben-${bookId}.min.json`,
-      `https://cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@1/editions/ben-${bookId}.json`,
-      `https://raw.githubusercontent.com/fawazahmed0/hadith-api/1/editions/ben-${bookId}.min.json`,
-      `https://raw.githubusercontent.com/fawazahmed0/hadith-api/1/editions/ben-${bookId}.json`
-    ],
-
-    // Fetch from any working CDN
-    _fetchHadithJson: async (bookId) => {
-      const urls = HadithAPI._hadithUrls(bookId);
-      for (const url of urls) {
+    function fallbackCopy(text) {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.style.position = 'fixed';
+        textarea.style.left = '-9999px';
+        document.body.appendChild(textarea);
+        textarea.select();
         try {
-          const res = await fetch(url, { cache: 'no-store' });
-          if (res.ok) return await res.json();
-        } catch (e) { /* try next */ }
-      }
-      return null;
-    },
-
-    getBookList: async () => {
-      const books = [
-        { id: 'bukhari', name: 'সহীহ বুখারী', count: 7563, icon: '📚', color: '#064e3b' },
-        { id: 'abudawud', name: 'সুনান আবু দাউদ', count: 5274, icon: '📜', color: '#7c3aed' },
-        { id: 'tirmidhi', name: 'সুনান তিরমিযী', count: 3956, icon: '📗', color: '#dc2626' },
-        { id: 'nasai', name: 'সুনান নাসাঈ', count: 5758, icon: '📘', color: '#d97706' },
-        { id: 'ibnmajah', name: 'সুনান ইবনে মাজাহ', count: 4341, icon: '📙', color: '#059669' }
-      ];
-
-      for (const b of books) {
-        const meta = await getFromDB('hadith', `book_meta_${b.id}`);
-        b.isDownloaded = !!meta;
-        if (meta) b.count = meta.totalCount || b.count;
-      }
-      return books;
-    },
-
-    downloadBook: async (bookId, progressCallback) => {
-      try {
-        if (progressCallback) progressCallback(5, 'CDN থেকে ডাউনলোড শুরু...');
-        const json = await HadithAPI._fetchHadithJson(bookId);
-        if (!json) throw new Error('সব CDN ব্যর্থ');
-        const hadiths = Array.isArray(json) ? json : (json.hadiths || json.data || []);
-        if (!hadiths.length) throw new Error('হাদিস ডাটা খালি');
-        if (progressCallback) progressCallback(20, `${hadiths.length} হাদিস পাওয়া গেছে...`);
-        if (!dbInstance) await initDB();
-        let inserted = 0;
-        const total = hadiths.length;
-        const chunkSize = 150;
-        for (let i = 0; i < total; i += chunkSize) {
-          const chunk = hadiths.slice(i, i + chunkSize);
-          await new Promise(r => setTimeout(r, 30));
-          await new Promise((resolve, reject) => {
-            const tx = dbInstance.transaction('hadith', 'readwrite');
-            tx.oncomplete = resolve; tx.onerror = reject;
-            const store = tx.objectStore('hadith');
-            for (const h of chunk) {
-              const bangla = h.text || h.body || h.bangla || '';
-              const num = h.hadithnumber || h.number || h.id || (inserted + 1);
-              const grade = h.grades?.[0]?.grade || h.grade || 'অজানা';
-              const topics = HADITH_TOPICS
-                .filter(t => t.keywords.some(kw => bangla.toLowerCase().includes(kw)))
-                .map(t => t.id);
-              store.put({
-                key: `${bookId}_${String(num).padStart(6, '0')}`,
-                data: { book: bookId, number: num, bangla, grade, topics }
-              });
-            }
-          });
-          inserted += chunk.length;
-          if (progressCallback) progressCallback(20 + Math.floor((inserted / total) * 78), `${inserted}/${total}`);
-        }
-        await saveToDB('hadith', `book_meta_${bookId}`, { totalCount: total });
-        if (progressCallback) progressCallback(100, 'সম্পন্ন!');
-        return true;
-      } catch (err) { console.error('downloadBook:', err); return false; }
-    },
-
-    getHadithsByTopic: async (topicId) => {
-      if (!dbInstance) await initDB();
-      return new Promise((resolve) => {
-        const tx = dbInstance.transaction('hadith', 'readonly');
-        const req = tx.objectStore('hadith').getAll();
-        req.onsuccess = () => {
-          const all = req.result;
-          resolve(all.filter(item => item.data?.topics?.includes(topicId)).map(i => i.data));
-        };
-        req.onerror = () => resolve([]);
-      });
-    },
-
-    getHadithsByBook: async (bookId, pageSize = 50, offset = 0) => {
-      if (!dbInstance) await initDB();
-      return new Promise((resolve) => {
-        const tx = dbInstance.transaction('hadith', 'readonly');
-        const req = tx.objectStore('hadith').getAll();
-        req.onsuccess = () => {
-          const all = req.result;
-          const filtered = all
-            .filter(item => item.data?.book === bookId)
-            .sort((a, b) => a.data.number - b.data.number)
-            .slice(offset, offset + pageSize)
-            .map(i => i.data);
-          resolve(filtered);
-        };
-        req.onerror = () => resolve([]);
-      });
-    },
-
-    clearBookCache: async (bookId) => {
-      if (!dbInstance) await initDB();
-      return new Promise((resolve, reject) => {
-        const tx = dbInstance.transaction('hadith', 'readwrite');
-        const store = tx.objectStore('hadith');
-
-        // 1. Delete all hadiths for this book
-        const req = store.getAll();
-        req.onsuccess = () => {
-          const all = req.result;
-          all.forEach(item => {
-            if (item.data?.book === bookId) store.delete(item.key);
-          });
-        };
-
-        // 2. Delete metadata
-        store.delete(`book_meta_${bookId}`);
-
-        tx.oncomplete = () => resolve(true);
-        tx.onerror = () => reject(tx.error);
-      });
-    },
-
-    globalSearch: async (query) => {
-      const books = ['bukhari', 'tirmidhi', 'abudawud', 'nasai', 'ibnmajah'];
-
-      // 1. Try local IndexedDB first
-      if (dbInstance) {
-        const tx = dbInstance.transaction('hadith', 'readonly');
-        const store = tx.objectStore('hadith');
-        const req = store.getAll();
-        const localResults = await new Promise(r => { req.onsuccess = () => r(req.result); req.onerror = () => r([]); });
-
-        if (localResults.length > 500) { // If significant data exists locally
-          const matches = localResults.filter(item =>
-            item.data?.bangla?.includes(query) ||
-            String(item.data?.number) === query
-          ).map(i => i.data);
-          if (matches.length > 0) return matches;
-        }
-      }
-
-      // 2. Fallback to API/CDN if no local matches found
-      const searchTasks = books.map(book =>
-        fetch(`https://cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@1/info/${book}/bn.json`)
-          .then(res => res.json())
-          .catch(() => null)
-      );
-
-      const allData = await Promise.all(searchTasks);
-      let globalResults = [];
-
-      allData.forEach((data, index) => {
-        if (!data) return;
-        const hadiths = Array.isArray(data) ? data : (data.hadiths || []);
-        const matches = hadiths.filter(h =>
-          (h.text || '').includes(query) || (h.hadithnumber || '').toString() === query
-        ).map(h => ({ ...h, bookName: books[index] }));
-        globalResults = [...globalResults, ...matches];
-      });
-
-      return globalResults;
-    },
-
-    renderAllItems: (container, items, createCardFn) => {
-      container.innerHTML = '';
-      items.forEach(item => {
-        const card = createCardFn(item);
-        container.appendChild(card);
-      });
-    }
-    ,
-
-    // Verify Hadith Authenticity with AI
-    verifyHadith: async (book, number, arabic, bangla) => {
-      const cacheKey = `hadith_verify_${book}_${number}`;
-      const cached = await getAICache(cacheKey);
-      if (cached) return cached;
-
-      const prompt = `আপনি একজন বিশেষজ্ঞ "মুহাদ্দিস" (হাদিস বিশারদ)। নিচের হাদিসটি অত্যন্ত গভীর ও কারিগরিভাবে যাচাই করুন:
-
-**হাদিসের তথ্য:**
-- গ্রন্থ: ${book}
-- হাদিস নম্বর: ${number}
-- মূল পাঠ: ${bangla}
-
-**আপনার যাচাইয়ের মাপকাঠি:**
-১. **সনদ ও মতন বিশ্লেষণ:** হাদিসের সনদ (Chain) এবং পাঠ (Text) সহিহ কি না?
-২. **হাদিসের স্তর:** এটি কি সহিহ, হাসান, যয়িফ নাকি মাওদু? বিস্তারিত কারণসহ উল্লেখ করুন।
-৩. **বিদ্বানদের অভিমত:** ইমাম বুখারী, মুসলিম বা অন্যান্য নির্ভরযোগ্য মুহাদ্দিসগণের এই হাদিস সম্পর্কে কী মত?
-৪. **ফাইনাল রায় (Verdict):** এটি কি আমলযোগ্য?
-
-আপনার উত্তরটি যেন একজন অভিজ্ঞ মুহাদ্দিসের মতো প্রামাণিক এবং সুস্পষ্ট হয়। হেডার ও বোল্ড টেক্সট ব্যবহার করে সুন্দরভাবে উপস্থাপন করুন।`;
-
-      const result = await QuranAPI._robustAICall(prompt);
-      if (result) {
-        setAICache(cacheKey, result);
-        return result;
-      }
-      return "AI সার্ভিস সাময়িকভাবে অনুপলব্ধ। পরে আবার চেষ্টা করুন।";
-    },
-
-    getHadithExplanation: async (book, number, text) => {
-      const cacheKey = `hadith_exp_${book}_${number}`;
-      const cached = await getAICache(cacheKey);
-      if (cached) return cached;
-
-      const prompt = `আপনি একজন প্রাজ্ঞ ইসলামি পণ্ডিত এবং আধ্যাত্মিক নসিহতকারী। নিচের হাদিসটির একটি "হৃদয়স্পর্শী ও তাত্ত্বিক" ব্যাখ্যা প্রদান করুন:
-
-**হাদিস পরিচিতি:**
-- গ্রন্থ: ${book}
-- হাদিস নম্বর: ${number}
-- হাদিসের বর্ণনা: ${text}
-
-**উত্তরে অবশ্যই যা থাকতে হবে:**
-১. **মূল শিক্ষা:** হাদিসটির মূল মেইল বা সারমর্ম কী?
-২. **আধ্যাত্মিক তাৎপর্য:** এই হাদিসটি কীভাবে আমাদের আত্মা ও ঈমান গঠনে সাহায্য করে?
-৩. **আধুনিক প্রয়োগ:** বর্তমান যুগে বা সমাজের প্রেক্ষাপটে এই হাদিসটির প্রয়োগ ও গুরুত্ব।
-৪. **পারিবারিক ও সামাজিক নসিহত:** এই হাদিস থেকে আমাদের জীবনের জন্য প্রয়োজনীয় উপদেশ।
-
-উত্তরটি সাবলীল বাংলায়, সুন্দর প্যারাগ্রাফ এবং বোল্ড হেডিং ব্যবহার করে প্রিমিয়াম ফরম্যাটে দিন।`;
-
-      const result = await QuranAPI._robustAICall(prompt);
-      if (result) {
-        setAICache(cacheKey, result);
-        return result;
-      }
-      return "বিস্তারিত ব্যাখ্যা লোড করতে সমস্যা হয়েছে। পরে আবার চেষ্টা করুন।";
-    }
-  };
-
-
-  // --- AUDIO MANAGER (Full Surah Offline Download) ---
-  const AudioManagerObj = {
-    cacheName: 'islamic-audio-cache-v1',
-    getCacheKey: (s, a) => `https://offline-audio.local/${s}/${a}`,
-
-    // Ayah count for each surah (index = surah number)
-    // Source: api.alquran.cloud - verified accurate
-    SURAH_AYAH_COUNTS: [
-      0, // Index 0 (not used)
-      7, 286, 200, 176, 120, 165, 206, 75, 129, 109, 123, 111, 43, 52, 99, 128, 111, 110, 98, 135, 112, 78, 118, 64, 77, 227, 93, 88, 69, 60, 34, 30, 73, 54, 45, 83, 182, 88, 75, 85, 54, 53, 89, 59, 37, 35, 38, 29, 18, 45, 60, 49, 62, 55, 78, 96, 29, 22, 24, 13, 14, 11, 11, 18, 12, 12, 30, 20, 52, 15, 19, 20, 56, 27, 93, 20, 18, 45, 37, 25, 25, 53, 11, 85, 19, 20, 32, 32, 44, 43, 66, 52, 48, 54, 35, 43, 54, 78, 60, 45, 42, 50, 46, 46, 42, 57, 53, 58, 44, 36, 34, 28, 25, 18, 12, 8, 8, 19, 5, 8, 8, 11, 11, 8, 3, 9, 5, 4, 7, 3, 6, 3, 5, 4, 5, 6
-    ],
-
-    // Calculate global ayah number from surah and ayah number
-    getGlobalAyahNumber: (surahId, ayahInSurah) => {
-      if (surahId < 1 || surahId > 114 || ayahInSurah < 1) return -1;
-      if (ayahInSurah > AudioManagerObj.SURAH_AYAH_COUNTS[surahId]) return -1;
-
-      let globalNum = 0;
-      for (let i = 1; i < surahId; i++) {
-        globalNum += AudioManagerObj.SURAH_AYAH_COUNTS[i];
-      }
-      return globalNum + ayahInSurah;
-    },
-
-    resolveAudioUrl: async (surahId, ayah) => {
-      // 1. Check cache first (offline downloaded)
-      const cache = await caches.open(AudioManagerObj.cacheName);
-
-      // Try multiple URL patterns that might be cached
-      const possibleUrls = [
-        `https://cdn.islamic.network/quran/audio/128/${currentQari}/${AudioManagerObj.getGlobalAyahNumber(surahId, ayah)}.mp3`,
-        `https://api.alquran.cloud/v1/ayah/${surahId}:${ayah}/${currentQari}`
-      ];
-
-      for (const url of possibleUrls) {
-        try {
-          const cached = await cache.match(url);
-          if (cached) {
-            console.log('[Audio] Using cached:', url);
-            return url;
-          }
-        } catch (e) { }
-      }
-
-      // 2. If online, get from API
-      if (navigator.onLine) {
-        try {
-          const res = await fetch(`https://api.alquran.cloud/v1/ayah/${surahId}:${ayah}/${currentQari}`);
-          if (res.ok) {
-            const json = await res.json();
-            if (json.data && json.data.audio) {
-              return json.data.audio;
-            }
-          }
-        } catch (e) { console.warn('[Audio] API failed, using CDN'); }
-      }
-
-      // 3. Fallback: CDN URL
-      const globalAyah = AudioManagerObj.getGlobalAyahNumber(surahId, ayah);
-      if (globalAyah > 0 && globalAyah <= 6236) {
-        return `https://cdn.islamic.network/quran/audio/128/${currentQari}/${globalAyah}.mp3`;
-      }
-
-      console.error('[Audio] Invalid surah/ayah:', surahId, ayah);
-      return null;
-    },
-
-    downloadFullSurah: async (surahId, totalAyahs, btn) => {
-      const originalText = btn.innerHTML;
-      btn.disabled = true;
-      try {
-        if (!navigator.onLine) throw new Error("offline");
-        const cache = await caches.open(AudioManagerObj.cacheName);
-
-        for (let i = 1; i <= totalAyahs; i++) {
-          btn.innerHTML = `<span class="material-symbols-rounded">hourglass_top</span> নামছে... (${i}/${totalAyahs})`;
-          const url = await AudioManagerObj.resolveAudioUrl(surahId, i);
-
-          const cached = await cache.match(url);
-          if (!cached) {
-            const res = await fetch(url, { mode: 'no-cors' });
-            if (res.ok || res.type === 'opaque') await cache.put(url, res.clone());
-          }
-        }
-        // Persist offline status
-        let offlineSurahs = JSON.parse(localStorage.getItem('offline_surahs') || '[]');
-        if (!offlineSurahs.includes(parseInt(surahId))) {
-          offlineSurahs.push(parseInt(surahId));
-          localStorage.setItem('offline_surahs', JSON.stringify(offlineSurahs));
-        }
-        btn.innerHTML = '<span class="material-symbols-rounded">task_alt</span> সেভড';
-        if (typeof showToast !== 'undefined') showToast("সম্পূর্ণ সূরা অফলাইনের জন্য সেভ করা হয়েছে!");
-        else alert("সম্পূর্ণ সূরা অফলাইনের জন্য সেভ করা হয়েছে!");
-      } catch (error) {
-        console.error("Surah Download Error:", error);
-        btn.innerHTML = '<span class="material-symbols-rounded">error</span> ব্যর্থ';
-      } finally {
-        setTimeout(() => {
-          btn.disabled = false;
-          if (btn.innerHTML.includes('ব্যর্থ') || btn.innerHTML.includes('সেভড')) {
-            btn.innerHTML = originalText;
-          }
-        }, 3000);
-      }
-    }
-  };
-
-  // --- OFFLINE MANAGER (Sync & Tracking) ---
-  const OfflineManager = {
-    isSyncing: false,
-    syncProgress: 0,
-
-    getStats: async () => {
-      const audioIds = JSON.parse(localStorage.getItem('offline_surahs') || '[]');
-      const books = await HadithAPI.getBookList();
-      const downloadedBooks = books.filter(b => b.isDownloaded);
-
-      return {
-        surahs: audioIds.length,
-        hadithBooks: downloadedBooks.length,
-        isFullySync: (audioIds.length === 114 && downloadedBooks.length === 5)
-      };
-    },
-
-    syncAll: async (progressCb) => {
-      if (OfflineManager.isSyncing) return;
-      OfflineManager.isSyncing = true;
-
-      try {
-        const books = ['bukhari', 'tirmidhi', 'abudawud', 'nasai', 'ibnmajah'];
-        let totalSteps = books.length + 114 + 114; // Books + Text + Audio
-        let completedSteps = 0;
-
-        const updateProgress = (msg) => {
-          completedSteps++;
-          const pct = Math.min(Math.floor((completedSteps / totalSteps) * 100), 99);
-          if (progressCb) progressCb(pct, msg);
-        };
-
-        // 1. Download Hadith Books
-        for (const book of books) {
-          const meta = await getFromDB('hadith', `book_meta_${book}`);
-          if (!meta) {
-            await HadithAPI.downloadBook(book, (p, m) => { /* internal progress ignored for batch */ });
-          }
-          updateProgress(`হাদিস বই ডাউনলোড হচ্ছে: ${book}`);
-        }
-
-        // 2. Download Quran Text (114 Surahs)
-        for (let i = 1; i <= 114; i++) {
-          updateProgress(`সূরা টেক্সট ডাউনলোড হচ্ছে: ${i}/114`);
-          await QuranAPI.getSurah(i);
-        }
-
-        // 3. Download Quran Audio (114 Surahs)
-        for (let i = 1; i <= 114; i++) {
-          const currentAudioIds = JSON.parse(localStorage.getItem('offline_surahs') || '[]');
-          if (!currentAudioIds.includes(parseInt(i))) {
-            // Minor hack: create a mock button to pass to downloadFullSurah
-            const mockBtn = { innerHTML: '', disabled: false };
-            await AudioManagerObj.downloadFullSurah(i, AudioManagerObj.SURAH_AYAH_COUNTS[i], mockBtn);
-
-            // Re-fetch and update to ensure consistency
-            const updatedIds = JSON.parse(localStorage.getItem('offline_surahs') || '[]');
-            if (!updatedIds.includes(parseInt(i))) {
-              updatedIds.push(parseInt(i));
-              localStorage.setItem('offline_surahs', JSON.stringify(updatedIds));
-            }
-          }
-          updateProgress(`সূরা অডিও ডাউনলোড হচ্ছে: ${i}/114`);
-        }
-
-        if (progressCb) progressCb(100, 'পুরো অ্যাপ অফলাইন সম্পন্ন!');
-      } catch (e) {
-        console.error('Batch Sync Error:', e);
-        if (progressCb) progressCb(-1, 'ডাউনলোড ব্যর্থ হয়েছে।');
-      } finally {
-        OfflineManager.isSyncing = false;
-      }
-    }
-  };
-
-  // --- VIEW MANAGER ---
-  const ViewObject = {
-    activeView: 'main',
-    switchView: function (viewId) {
-      if (!this.activeView) this.activeView = 'main';
-      const views = ['main', 'para', 'khatam', 'hadith'];
-      views.forEach(v => {
-        const el = document.getElementById(v + 'Section');
-        if (el) el.style.display = (v === viewId) ? 'block' : 'none';
-      });
-      this.activeView = viewId;
-      console.log('View switched to:', viewId);
-    }
-  };
-
-  // --- ADVANCED AUDIO PLAYER (Continuous Playback) ---
-  const AdvancedAudioPlayer = {
-    audio: new Audio(),
-    playlist: [],
-    currentIndex: -1,
-    isPlaying: false,
-    currentSurah: 0,
-    currentTitle: '',
-    uiContainer: null,
-
-    // Khatam Specific Variables
-    isKhatamMode: false,
-    _isTransitioning: false,
-    _isPrevLocked: false,
-    khatamEndSurah: null,
-    khatamEndAyah: null,
-
-    _musicControlsReady: false,
-    _useMediaSession: true,
-    _showUI: true,
-    _musicControlsCreated: false,
-
-    _getQariName: () => {
-      const q = QARI_LIST.find(x => x.id === currentQari);
-      return q ? q.name : currentQari;
-    },
-
-    _setupMusicControlsPlugin: async () => {
-      try {
-        if (AdvancedAudioPlayer._musicControlsReady) return;
-        if (!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform())) return;
-        const mc = window.CapacitorMusicControls;
-        if (!mc) return;
-
-        // iOS
-        try {
-          await mc.addListener('controlsNotification', (info) => {
-            AdvancedAudioPlayer._handleMusicControlsEvent(info);
-          });
+            document.execCommand('copy');
+            showToast('কপি হয়েছে! ✓');
         } catch (e) {
+            showToast('কপি করতে সমস্যা হয়েছে');
         }
+        document.body.removeChild(textarea);
+    }
 
-        // Android (plugin uses triggerJSEvent in some versions)
-        try {
-          document.addEventListener('controlsNotification', (event) => {
-            const info = event && event.detail ? event.detail : event;
-            AdvancedAudioPlayer._handleMusicControlsEvent(info);
-          });
-        } catch (e) {
-        }
+    function shareContent(question, answer) {
+        const text = `🌿 ইসলামিক প্রশ্নোত্তর\n\n❓ প্রশ্ন: ${question}\n\n💬 উত্তর:\n${answer}\n\n━━━━━━━━━━━\n📱 Islamic Hub App`;
 
-        AdvancedAudioPlayer._musicControlsReady = true;
-      } catch (e) {
-      }
-    },
-
-    _handleMusicControlsEvent: (payload) => {
-      try {
-        const message = payload && (payload.message || payload?.detail?.message);
-        switch (message) {
-          case 'music-controls-next':
-            AdvancedAudioPlayer.playNext();
-            break;
-          case 'music-controls-previous':
-            AdvancedAudioPlayer.playPrev();
-            break;
-          case 'music-controls-pause':
-            if (!AdvancedAudioPlayer.audio.src) return;
-            AdvancedAudioPlayer.audio.pause();
-            AdvancedAudioPlayer.isPlaying = false;
-            AdvancedAudioPlayer.updateUIContext();
-            break;
-          case 'music-controls-play':
-            if (!AdvancedAudioPlayer.audio.src) return;
-            AdvancedAudioPlayer.audio.play();
-            AdvancedAudioPlayer.isPlaying = true;
-            AdvancedAudioPlayer.updateUIContext();
-            break;
-          case 'music-controls-destroy':
-            AdvancedAudioPlayer.stop();
-            break;
-          default:
-            break;
-        }
-      } catch (e) {
-      }
-    },
-
-    _updateMusicControls: async () => {
-      try {
-        if (!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform())) return;
-        const mc = window.CapacitorMusicControls;
-        if (!mc) return;
-
-        const item = AdvancedAudioPlayer.currentIndex !== -1
-          ? (AdvancedAudioPlayer.playlist[AdvancedAudioPlayer.currentIndex] || null)
-          : null;
-        const track = item
-          ? `Surah ${AdvancedAudioPlayer.currentSurah} - Ayah ${item.ayah}`
-          : 'Al Quran';
-
-        // Use data URL for cover to avoid file:// scheme issues
-        const cover = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0iIzBlODk3ZSIvPjxyZWN0IHg9IjE1JSIgeT0iMTUlIiB3aWR0aD0iNzAlIiBoZWlnaHQ9IjcwJSIgcng9IjIwIiBmaWxsPSIjMGE1NDM4Ii8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxMjAiIGZpbGw9IiNmZmYiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj4rPC90ZXh0Pjwvc3ZnPg==';
-
-        if (!AdvancedAudioPlayer._musicControlsCreated && item) {
-          await mc.create({
-            track,
-            artist: AdvancedAudioPlayer._getQariName(),
-            album: 'Al Quran',
-            cover,
-            isPlaying: !!AdvancedAudioPlayer.isPlaying,
-            dismissable: true,
-            hasPrev: true,
-            hasNext: true,
-            hasClose: true,
-            elapsed: Math.floor(AdvancedAudioPlayer.audio.currentTime || 0),
-            duration: Math.floor(AdvancedAudioPlayer.audio.duration || 0)
-          });
-          AdvancedAudioPlayer._musicControlsCreated = true;
-        } else if (AdvancedAudioPlayer._musicControlsCreated) {
-          try {
-            mc.updateIsPlaying({ isPlaying: !!AdvancedAudioPlayer.isPlaying });
-          } catch (e) {
-          }
-          try {
-            mc.updateElapsed({
-              elapsed: Math.floor(AdvancedAudioPlayer.audio.currentTime || 0),
-              isPlaying: !!AdvancedAudioPlayer.isPlaying
+        if (navigator.share) {
+            navigator.share({
+                title: 'ইসলামিক প্রশ্নোত্তর',
+                text: text
+            }).catch(() => {
+                copyToClipboard(text);
             });
-          } catch (e) {
-          }
-        }
-      } catch (e) {
-      }
-    },
-
-    _updateMediaSession: (title) => {
-      if (!AdvancedAudioPlayer._useMediaSession) return;
-      if ('mediaSession' in navigator) {
-        const item = AdvancedAudioPlayer.playlist[AdvancedAudioPlayer.currentIndex];
-        const displayTitle = title || (item ? `সূরা ${item.surah} • আয়াত ${item.ayah}` : 'Islamic Hub');
-
-        // Use data URL for artwork to avoid file:// scheme issues
-        const artworkUrl = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgZmlsbD0iIzBlODk3ZSIvPjxyZWN0IHg9IjE1JSIgeT0iMTUlIiB3aWR0aD0iNzAlIiBoZWlnaHQ9IjcwJSIgcng9IjIwIiBmaWxsPSIjMGE1NDM4Ii8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxMjAiIGZpbGw9IiNmZmYiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj4rPC90ZXh0Pjwvc3ZnPg==';
-
-        navigator.mediaSession.metadata = new MediaMetadata({
-          title: displayTitle,
-          artist: 'Islamic Hub Premium',
-          album: 'Quran & Knowledge',
-          artwork: [
-            { src: artworkUrl, sizes: '512x512', type: 'image/png' }
-          ]
-        });
-
-        if (AdvancedAudioPlayer.audio && AdvancedAudioPlayer.audio.duration) {
-          navigator.mediaSession.setPositionState({
-            duration: AdvancedAudioPlayer.audio.duration,
-            playbackRate: AdvancedAudioPlayer.audio.playbackRate || 1,
-            position: AdvancedAudioPlayer.audio.currentTime || 0
-          });
-        }
-
-        navigator.mediaSession.playbackState = AdvancedAudioPlayer.isPlaying ? 'playing' : 'paused';
-      }
-    },
-
-    play: async (url, title, showUI = true, useMediaSession = true) => {
-      AdvancedAudioPlayer._showUI = showUI;
-      AdvancedAudioPlayer._useMediaSession = useMediaSession;
-
-      if (AdvancedAudioPlayer.audio.src !== url) {
-        AdvancedAudioPlayer.audio.src = url;
-      }
-
-      try {
-        await AdvancedAudioPlayer.audio.play();
-        AdvancedAudioPlayer.isPlaying = true;
-        if (showUI) AdvancedAudioPlayer.showUI();
-        else AdvancedAudioPlayer.hideUI();
-
-        if (useMediaSession) {
-          AdvancedAudioPlayer._updateMediaSession(title);
-        }
-      } catch (e) {
-        console.error("Playback failed:", e);
-      }
-    },
-
-    _setupMediaSessionHandlers: () => {
-      try {
-        if (!('mediaSession' in navigator)) return;
-        navigator.mediaSession.setActionHandler('play', () => {
-          if (!AdvancedAudioPlayer.audio.src) return;
-          AdvancedAudioPlayer.audio.play();
-          AdvancedAudioPlayer.isPlaying = true;
-          AdvancedAudioPlayer.updateUIContext();
-        });
-        navigator.mediaSession.setActionHandler('pause', () => {
-          if (!AdvancedAudioPlayer.audio.src) return;
-          AdvancedAudioPlayer.audio.pause();
-          AdvancedAudioPlayer.isPlaying = false;
-          AdvancedAudioPlayer.updateUIContext();
-        });
-        navigator.mediaSession.setActionHandler('previoustrack', () => AdvancedAudioPlayer.playPrev());
-        navigator.mediaSession.setActionHandler('nexttrack', () => AdvancedAudioPlayer.playNext());
-        navigator.mediaSession.setActionHandler('stop', () => AdvancedAudioPlayer.stop());
-      } catch (e) {
-      }
-    },
-
-    init: (containerId) => {
-      AdvancedAudioPlayer.uiContainer = document.getElementById(containerId);
-      AdvancedAudioPlayer._setupMediaSessionHandlers();
-      AdvancedAudioPlayer._setupMusicControlsPlugin();
-
-      // ENSURE SINGLE LISTENERS
-      AdvancedAudioPlayer.audio.removeEventListener('ended', AdvancedAudioPlayer._handleAudioEnded);
-      AdvancedAudioPlayer.audio.removeEventListener('ended', AdvancedAudioPlayer.playNext);
-      AdvancedAudioPlayer.audio.addEventListener('ended', AdvancedAudioPlayer._handleAudioEnded);
-
-      AdvancedAudioPlayer.audio.addEventListener('error', () => {
-        if (AdvancedAudioPlayer.currentIndex === -1 || !AdvancedAudioPlayer.audio.src) return;
-        console.warn("Audio playback error, trying next ayah...");
-        setTimeout(AdvancedAudioPlayer.playNext, 1000);
-      });
-      AdvancedAudioPlayer.audio.addEventListener('timeupdate', AdvancedAudioPlayer.updateProgress);
-    },
-
-    _handleAudioEnded: () => {
-      console.log("[Audio] Ayah ended");
-      AdvancedAudioPlayer.playNext();
-    },
-
-    loadSurah: async (surahId, totalAyahs, autoStart = true) => {
-      AdvancedAudioPlayer.currentSurah = surahId;
-      AdvancedAudioPlayer.playlist = [];
-      AdvancedAudioPlayer.currentIndex = 0;
-
-      for (let i = 1; i <= totalAyahs; i++) {
-        AdvancedAudioPlayer.playlist.push({ surah: surahId, ayah: i });
-      }
-
-      AdvancedAudioPlayer.showUI();
-      if (autoStart) {
-        // Dynamic Header Color Sync
-        const colors = ['#064e3b', '#0891b2', '#7c3aed', '#dc2626', '#d97706', '#059669', '#0284c7', '#9333ea', '#ea580c', '#16a34a', '#0369a1', '#7e22ce', '#b91c1c', '#b45309', '#047857'];
-        const color = colors[(surahId - 1) % colors.length];
-        const opacity = document.documentElement.getAttribute('data-theme') === 'dark' ? '0.9' : '0.85';
-        document.documentElement.style.setProperty('--header-accent', color + (Math.round(parseFloat(opacity) * 255).toString(16).padStart(2, '0')));
-
-        await AdvancedAudioPlayer.playIndex(0);
-      } else {
-        AdvancedAudioPlayer.updateUIContext();
-      }
-    },
-
-    playIndex: async (index) => {
-      if (index < 0 || index >= AdvancedAudioPlayer.playlist.length) return;
-
-      // Reset error count on successful start if NOT coming from an error skip
-      if (!AdvancedAudioPlayer._isErrorSkipping) {
-        AdvancedAudioPlayer._errorCount = 0;
-      }
-      AdvancedAudioPlayer._isErrorSkipping = false;
-
-      AdvancedAudioPlayer.currentIndex = index;
-      const item = AdvancedAudioPlayer.playlist[index];
-
-      // DETECT SURAH CHANGE TO UPDATE UI READER
-      if (item.surah && item.surah !== AdvancedAudioPlayer.currentSurah) {
-        console.log("[Audio] Surah changed to:", item.surah);
-        AdvancedAudioPlayer.currentSurah = item.surah;
-        if (typeof window.openSurah === 'function') {
-          await window.openSurah(item.surah);
-        }
-      }
-
-      const url = await AudioManagerObj.resolveAudioUrl(item.surah, item.ayah);
-      if (!url) {
-        AdvancedAudioPlayer.playNext();
-        return;
-      }
-
-      // আগের অডিওকে সম্পূর্ণভাবে পজ এবং ক্লিয়ার করা হচ্ছে যেন স্প্যাম এরর না দেয়
-      AdvancedAudioPlayer.audio.pause();
-      AdvancedAudioPlayer.audio.src = url;
-      AdvancedAudioPlayer.audio.load();
-
-      try {
-        await AdvancedAudioPlayer.audio.play();
-        AdvancedAudioPlayer.isPlaying = true;
-        AdvancedAudioPlayer.showUI();
-        AdvancedAudioPlayer.updateUIContext();
-        AdvancedAudioPlayer.highlightCurrentVerse(item.ayah);
-
-        // EVENT-DRIVEN STREAK: Update streak when audio actually plays
-        if (typeof window.updateReadingStreak === 'function') {
-          window.updateReadingStreak();
-        }
-
-        // TRACK READING SPEED
-        if (!AdvancedAudioPlayer._readingStartTime) {
-          AdvancedAudioPlayer._readingStartTime = Date.now();
-          let readCount = 0;
-          try { readCount = JSON.parse(localStorage.getItem('khatam_read_ayahs') || '[]').length; } catch (e) { }
-          AdvancedAudioPlayer._initialAyahCount = readCount;
-        }
-
-        // SAVE RESUME STATE
-        const state = { surah: item.surah, ayah: item.ayah, total: AdvancedAudioPlayer.playlist.length, time: Date.now() };
-        if (AdvancedAudioPlayer.isKhatamMode) {
-          localStorage.setItem('khatam_last_playback', JSON.stringify(state));
-          if (window.SyncService) SyncService.pushToCloud('khatam_last_playback');
         } else {
-          localStorage.setItem('islamic_last_playback', JSON.stringify(state));
-          if (window.SyncService) SyncService.pushToCloud('islamic_last_playback');
+            copyToClipboard(text);
         }
+    }
 
-        // INTELLIGENT PREFETCH: Prepare next Ayah while current one plays
-        if (window.AeroTurbo && index + 1 < AdvancedAudioPlayer.playlist.length) {
-          const nextItem = AdvancedAudioPlayer.playlist[index + 1];
-          AudioManagerObj.resolveAudioUrl(nextItem.surah, nextItem.ayah).then(nextUrl => {
-            if (nextUrl) AeroTurbo.prefetchAudio(nextUrl);
-          });
-        }
-      } catch (e) {
-        console.warn("Audio Play Error, skipping to next:", e);
-        AdvancedAudioPlayer.isPlaying = false;
-        AdvancedAudioPlayer.updateUIContext();
+    function showToast(message) {
+        const existing = document.querySelector('.ai-toast-msg');
+        if (existing) existing.remove();
 
-        // Prevent infinite loop if multiple files are missing
-        AdvancedAudioPlayer._errorCount = (AdvancedAudioPlayer._errorCount || 0) + 1;
-        if (AdvancedAudioPlayer._errorCount > 3) {
-          console.error("[Audio] Too many consecutive errors. Stopping.");
-          AdvancedAudioPlayer.stop();
-          AdvancedAudioPlayer._errorCount = 0;
-          if (typeof showToast !== 'undefined') showToast("অডিও লোড করতে সমস্যা হচ্ছে। প্লেব্যাক বন্ধ করা হয়েছে।");
-        } else {
-          AdvancedAudioPlayer._isErrorSkipping = true;
-          setTimeout(AdvancedAudioPlayer.playNext, 1500);
-        }
-      }
-    },
-
-    buildKhatamPlaylist: () => {
-      const playlist = [];
-      for (let para = 1; para <= 30; para++) {
-        const ranges = PARA_MAP[para];
-        ranges.forEach(r => {
-          for (let ay = r.start; ay <= r.end; ay++) {
-            playlist.push({ surah: r.surah, ayah: ay, para: para });
-          }
-        });
-      }
-      return playlist;
-    },
-
-    buildParaPlaylist: (para) => {
-      const ranges = PARA_MAP[para];
-      const playlist = [];
-      ranges.forEach(r => {
-        for (let ay = r.start; ay <= r.end; ay++) {
-          playlist.push({ surah: r.surah, ayah: ay, para: para });
-        }
-      });
-      return playlist;
-    },
-
-    playNext: () => {
-      const next = AdvancedAudioPlayer.currentIndex + 1;
-
-      // ── Range-play Guard: Stop at the user-defined end position ──
-      if (next < AdvancedAudioPlayer.playlist.length) {
-        const nextItem = AdvancedAudioPlayer.playlist[next];
-        const endSurah = AdvancedAudioPlayer.khatamEndSurah;
-        const endAyah = AdvancedAudioPlayer.khatamEndAyah;
-
-        if (endSurah !== null && endAyah !== null) {
-          // Has the next item gone PAST the end range?
-          const pastEnd =
-            nextItem.surah > endSurah ||
-            (nextItem.surah === endSurah && nextItem.ayah > endAyah);
-
-          if (pastEnd) {
-            console.log("[Audio] Range end reached. Stopping playback.");
-            AdvancedAudioPlayer.stop();
-            if (typeof showToast !== 'undefined') showToast("নির্বাচিত পরিসীমার তিলাওয়াত শেষ হয়েছে।");
-            return;
-          }
-        }
-      }
-
-      if (next >= AdvancedAudioPlayer.playlist.length) {
-        console.log("[Audio] Playlist finished");
-        AdvancedAudioPlayer.stop();
-        return;
-      }
-      AdvancedAudioPlayer.playIndex(next);
-    },
-    updateProgress: () => {
-      if (!AdvancedAudioPlayer.audio || !AdvancedAudioPlayer.audio.duration) return;
-      const progress = (AdvancedAudioPlayer.audio.currentTime / AdvancedAudioPlayer.audio.duration) * 100;
-      const fill = document.getElementById('apProgress');
-      if (fill) fill.style.width = progress + '%';
-    },
-
-    hide: () => {
-      AdvancedAudioPlayer.stop();
-      if (typeof hidePlayer === 'function') hidePlayer();
-      else {
-        const p = document.getElementById('floatingPlayer');
-        if (p) p.classList.remove('show');
-      }
-    },
-
-    playPrev: () => {
-      if (!AdvancedAudioPlayer.audio) return;
-      const prev = AdvancedAudioPlayer.currentIndex - 1;
-      if (prev < 0) {
-        AdvancedAudioPlayer.audio.currentTime = 0;
-        return;
-      }
-      AdvancedAudioPlayer.playIndex(prev);
-    },
-
-    togglePlay: () => {
-      const mainAudio = AdvancedAudioPlayer.audio;
-
-      // Sync with actual audio element state
-      if (mainAudio.src && mainAudio.src !== window.location.href) {
-        if (!mainAudio.paused) {
-          mainAudio.pause();
-          AdvancedAudioPlayer.isPlaying = false;
-        } else {
-          mainAudio.play().then(() => {
-            AdvancedAudioPlayer.isPlaying = true;
-            AdvancedAudioPlayer.updateUIContext();
-          }).catch(e => {
-            console.warn("Main audio play failed:", e);
-            AdvancedAudioPlayer.isPlaying = false;
-          });
-        }
-        AdvancedAudioPlayer.updateUIContext();
-        return;
-      }
-
-      // Legacy fallback
-      if (window.currentAyahAudio && window.currentAyahAudio.src) {
-        if (!window.currentAyahAudio.paused) {
-          window.currentAyahAudio.pause();
-          AdvancedAudioPlayer.isPlaying = false;
-        } else {
-          window.currentAyahAudio.play().then(() => {
-            AdvancedAudioPlayer.isPlaying = true;
-          }).catch(e => console.error("currentAyahAudio play failed", e));
-        }
-        AdvancedAudioPlayer.updateUIContext();
-        return;
-      }
-    },
-
-    // Play next ayah (works with both playlist and currentAyahAudio)
-    playNextAyah: () => {
-      if (window.currentAyahNo && window.currentAyahTotal) {
-        const nextNo = window.currentAyahNo + 1;
-        if (nextNo <= window.currentAyahTotal) {
-          const nextAyah = document.getElementById(`ayah-${nextNo}`);
-          if (nextAyah) {
-            const nextBtn = nextAyah.querySelector('.ayah-act-btn:nth-child(2)') || nextAyah.querySelector('.ayah-act-btn[onclick*="playSingleAyah"]');
-            if (nextBtn) {
-              nextAyah.scrollIntoView({ behavior: 'smooth', block: 'center' });
-              setTimeout(() => nextBtn.click(), 300);
-              return;
-            }
-          }
-        } else {
-          AdvancedAudioPlayer.playNext();
-        }
-      } else {
-        AdvancedAudioPlayer.playNext();
-      }
-    },
-
-    // Play previous ayah
-    playPrevAyah: () => {
-      if (window.currentAyahNo && window.currentAyahNo > 1) {
-        const prevNo = window.currentAyahNo - 1;
-        const prevAyah = document.getElementById(`ayah-${prevNo}`);
-        if (prevAyah) {
-          // Robustly find the play button (usually the 2nd child in actions or contains playSingleAyah)
-          const prevBtn = prevAyah.querySelector('.ayah-act-btn:nth-child(2)') || prevAyah.querySelector('.ayah-act-btn[onclick*="playSingleAyah"]');
-          if (prevBtn) {
-            prevAyah.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            setTimeout(() => prevBtn.click(), 300);
-            return;
-          }
-        }
-      }
-      AdvancedAudioPlayer.playPrev();
-    },
-
-    // ALIASES for compatibility with UI calls
-    toggle: () => AdvancedAudioPlayer.togglePlay(),
-
-
-    // Play a single audio URL directly (for individual ayah playback or external namaz audio)
-    play: async (url, title, showUI = true, isQuranic = false) => {
-      console.log('AdvancedAudioPlayer: play request', { url, title, showUI, isQuranic });
-      if (!url) return;
-
-      try {
-        AdvancedAudioPlayer.audio.pause();
-        AdvancedAudioPlayer.audio.src = '';
-        AdvancedAudioPlayer.audio.load();
-      } catch (e) { }
-
-      AdvancedAudioPlayer.currentIndex = -1;
-      AdvancedAudioPlayer.currentTitle = title || 'অডিও প্লে হচ্ছে...';
-      AdvancedAudioPlayer.audio.src = url;
-
-      if (showUI) {
-        AdvancedAudioPlayer.showUI();
-      } else {
-        AdvancedAudioPlayer.hideUI();
-      }
-
-      const titleEl = document.getElementById('apTitle');
-      if (titleEl) titleEl.textContent = AdvancedAudioPlayer.currentTitle;
-
-      AdvancedAudioPlayer.audio.load();
-      AdvancedAudioPlayer.audio.play().then(() => {
-        AdvancedAudioPlayer.isPlaying = true;
-        AdvancedAudioPlayer.updateUIContext();
-      }).catch(e => {
-        console.warn('AdvancedAudioPlayer: play() failed, trying reconstruction', e);
-        if (e.name === 'NotSupportedError') {
-          AdvancedAudioPlayer._reconstructAudio();
-          AdvancedAudioPlayer.audio.src = url;
-          AdvancedAudioPlayer.audio.load();
-          AdvancedAudioPlayer.audio.play().then(() => {
-            AdvancedAudioPlayer.isPlaying = true;
-            AdvancedAudioPlayer.updateUIContext();
-          }).catch(e2 => console.error("Reconstruction retry failed", e2));
-        }
-        AdvancedAudioPlayer.isPlaying = false;
-        AdvancedAudioPlayer.updateUIContext();
-      });
-    },
-
-
-    _reconstructAudio: () => {
-      console.warn("AdvancedAudioPlayer: Manual Audio reconstruction triggered.");
-      try {
-        AdvancedAudioPlayer.audio.pause();
-        AdvancedAudioPlayer.audio.src = '';
-        AdvancedAudioPlayer.audio.load();
-      } catch (e) { }
-      AdvancedAudioPlayer.audio = new Audio();
-      AdvancedAudioPlayer.audio.addEventListener('ended', AdvancedAudioPlayer._handleAudioEnded);
-      AdvancedAudioPlayer.audio.addEventListener('timeupdate', AdvancedAudioPlayer.updateProgress);
-      AdvancedAudioPlayer.audio.addEventListener('error', () => {
-        if (AdvancedAudioPlayer.currentIndex === -1 || !AdvancedAudioPlayer.audio.src) return;
-        setTimeout(AdvancedAudioPlayer.playNext, 1000);
-      });
-    },
-
-    stop: () => {
-      // Stop window.currentAyahAudio if available
-      if (window.currentAyahAudio) {
-        window.currentAyahAudio.pause();
-        window.currentAyahAudio.src = '';
-      }
-      if (window.currentAyahBtn) {
-        window.currentAyahBtn.innerHTML = '<span class="material-symbols-rounded">play_circle</span>';
-        window.currentAyahBtn.classList.remove('audio-playing');
-        window.currentAyahBtn = null;
-      }
-
-      AdvancedAudioPlayer.audio.pause();
-      AdvancedAudioPlayer.audio.src = '';
-      AdvancedAudioPlayer.isPlaying = false;
-      AdvancedAudioPlayer.currentIndex = -1;
-      AdvancedAudioPlayer.hideUI();
-      try {
-        if (AdvancedAudioPlayer._musicControlsCreated && window.CapacitorMusicControls) {
-          window.CapacitorMusicControls.destroy();
-        }
-      } catch (e) {
-      }
-      AdvancedAudioPlayer._musicControlsCreated = false;
-      // Remove all highlights
-      document.querySelectorAll('.ayah-card').forEach(el => {
-        el.style.border = '';
-        el.style.backgroundColor = '';
-        el.classList.remove('playing-pulse');
-      });
-      AdvancedAudioPlayer.updateUIContext();
-    },
-
-    highlightCurrentVerse: (ayahNum, retryCount = 0) => {
-      document.querySelectorAll('.ayah-card').forEach(el => {
-        el.style.border = '';
-        el.style.backgroundColor = '';
-        el.classList.remove('playing-pulse');
-      });
-      const vp = document.getElementById(`ayah-${ayahNum}`);
-      if (vp) {
-        vp.style.border = '2px solid var(--accent-secondary)';
-        vp.style.backgroundColor = 'var(--accent-glow)';
-        vp.classList.add('playing-pulse');
-        // Auto-scroll so it's visible in the middle
-        vp.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      } else if (retryCount < 10) {
-        // If not found (due to chunked rendering), try again 
-        setTimeout(() => AdvancedAudioPlayer.highlightCurrentVerse(ayahNum, retryCount + 1), 300);
-      }
-    },
-
-    updateProgress: () => {
-      const prog = document.getElementById('audioProgressFill');
-      if (prog && AdvancedAudioPlayer.audio.duration) {
-        const percent = (AdvancedAudioPlayer.audio.currentTime / AdvancedAudioPlayer.audio.duration) * 100;
-        prog.style.width = `${percent}%`;
-      }
-
-      AdvancedAudioPlayer._updateMediaSession();
-      AdvancedAudioPlayer._updateMusicControls();
-    },
-
-    showUI: () => {
-      if (AdvancedAudioPlayer.uiContainer) {
-        AdvancedAudioPlayer.uiContainer.style.display = 'flex';
-        AdvancedAudioPlayer.uiContainer.style.opacity = '1';
-        AdvancedAudioPlayer.uiContainer.style.pointerEvents = 'auto';
-        AdvancedAudioPlayer.uiContainer.classList.add('show');
-        AdvancedAudioPlayer.uiContainer.classList.add('active');
-        AdvancedAudioPlayer.updateUIContext();
-      }
-    },
-
-    hideUI: () => {
-      if (AdvancedAudioPlayer.uiContainer) {
-        AdvancedAudioPlayer.uiContainer.classList.remove('active');
-        // Force opacity/pointer-events reset after transition
+        const toast = document.createElement('div');
+        toast.className = 'ai-toast-msg';
+        toast.style.cssText = `
+            position:fixed;top:max(20px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);
+            background:linear-gradient(135deg,#0A5438,#059669);color:white;
+            padding:14px 28px;border-radius:50px;z-index:999999;
+            font-size:14px;font-weight:700;box-shadow:0 8px 24px rgba(10,84,56,0.3);
+            display:flex;align-items:center;gap:8px;animation:toastSlideIn 0.3s ease;
+        `;
+        toast.innerHTML = `<span class="material-symbols-rounded" style="font-size:18px;">info</span><span>${message}</span>`;
+        document.body.appendChild(toast);
         setTimeout(() => {
-          if (!AdvancedAudioPlayer.uiContainer.classList.contains('active')) {
-            AdvancedAudioPlayer.uiContainer.style.opacity = '0';
-            AdvancedAudioPlayer.uiContainer.style.pointerEvents = 'none';
-          }
-        }, 600);
-      }
-    },
-
-    updateUIContext: () => {
-      if (!AdvancedAudioPlayer.uiContainer) return;
-      const btn = document.getElementById('apPlayBtn');
-      if (btn) {
-        btn.innerHTML = AdvancedAudioPlayer.isPlaying ? '<span class="material-symbols-rounded">pause</span>' : '<span class="material-symbols-rounded">play_arrow</span>';
-        btn.style.background = AdvancedAudioPlayer.isPlaying ? '#ef4444' : 'var(--accent)';
-      }
-      const titleEl = document.getElementById('apTitle');
-      if (titleEl) {
-        if (AdvancedAudioPlayer.currentIndex !== -1) {
-          const item = AdvancedAudioPlayer.playlist[AdvancedAudioPlayer.currentIndex] || { ayah: 0 };
-          titleEl.innerText = `সূরা ${AdvancedAudioPlayer.currentSurah} • আয়াত ${item.ayah}`;
-        } else if (AdvancedAudioPlayer.currentTitle) {
-          titleEl.innerText = AdvancedAudioPlayer.currentTitle;
-        }
-      }
-
-      AdvancedAudioPlayer._updateMediaSession();
-      AdvancedAudioPlayer._updateMusicControls();
+            toast.style.animation = 'toastSlideOut 0.3s ease';
+            setTimeout(() => toast.remove(), 300);
+        }, 1000);
     }
-  };
 
-  // --- UI RENDERER ---
-  const UIRenderer = {
-    currentAudio: null,
-    currentBtn: null,
-
-    playAudio: (url, btnElement, onEndCallback) => {
-      if (!url) {
-        if (typeof UI !== 'undefined') UI.showToast("এই আয়াতের অডিও পাওয়া যায়নি");
-        else alert("এই আয়াতের অডিও পাওয়া যায়নি");
-        return;
-      }
-      // Toggle Play/Pause if clicking the same button
-      if (UIRenderer.currentBtn === btnElement && UIRenderer.currentAudio) {
-        if (!UIRenderer.currentAudio.paused) {
-          UIRenderer.currentAudio.pause();
-          btnElement.classList.remove('audio-playing');
-          btnElement.innerHTML = '<span class="material-symbols-rounded">play_circle</span>';
-          return;
-        } else {
-          UIRenderer.currentAudio.play();
-          btnElement.classList.add('audio-playing');
-          btnElement.innerHTML = '<span class="material-symbols-rounded">pause_circle</span>';
-          return;
+    // Helper functions for copy/share buttons
+    function copyAnswer(btn) {
+        const container = btn.closest('.ai-answer-container');
+        if (container) {
+            const answerText = container.querySelector('.ai-answer-text');
+            if (answerText) {
+                copyToClipboard(answerText.innerText);
+            }
         }
-      }
+    }
 
-      // Stop previous audio and reset previous button
-      if (UIRenderer.currentAudio) {
-        UIRenderer.currentAudio.pause();
-        if (UIRenderer.currentBtn) {
-          UIRenderer.currentBtn.classList.remove('audio-playing');
-          UIRenderer.currentBtn.innerHTML = '<span class="material-symbols-rounded">play_circle</span>';
+    function shareAnswer(btn, question) {
+        const container = btn.closest('.ai-answer-container');
+        if (container) {
+            const answerText = container.querySelector('.ai-answer-text');
+            if (answerText) {
+                shareContent(question, answerText.innerText);
+            }
         }
-      }
+    }
 
-      if (url) {
-        UIRenderer.currentAudio = new Audio(url);
-        UIRenderer.currentAudio.play();
-        UIRenderer.currentBtn = btnElement;
-
-        if (btnElement) {
-          btnElement.classList.add('audio-playing');
-          btnElement.innerHTML = '<span class="material-symbols-rounded">pause_circle</span>';
+    // AI Scholar Chat UI - Android App Style
+    function showView(initialQuestion = null, initialAnswer = null) {
+        const existingModal = document.getElementById('aiScholarModal');
+        if (existingModal) {
+            existingModal.style.display = 'flex';
+            if (initialQuestion) {
+                if (initialAnswer) {
+                    renderQuestionAnswer(initialQuestion, initialAnswer, true);
+                } else {
+                    const input = document.getElementById('aiChatInput');
+                    if (input) {
+                        input.value = initialQuestion;
+                        sendFromUI();
+                    }
+                }
+            }
+            return;
         }
 
-        UIRenderer.currentAudio.onended = () => {
-          if (btnElement) {
-            btnElement.classList.remove('audio-playing');
-            btnElement.innerHTML = '<span class="material-symbols-rounded">play_circle</span>';
-          }
-          UIRenderer.currentBtn = null;
-          if (onEndCallback) onEndCallback();
-        };
-      }
-    },
+        const history = getHistory();
+        const cacheSize = getCacheSize();
+        const T = THEME;
 
-    // TTS Removed As Requested
-    createModal: (title, question, answer) => {
-      // Remove any existing modal
-      const existing = document.getElementById('quran-ai-modal');
-      if (existing) existing.remove();
+        const modal = document.createElement('div');
+        modal.id = 'aiScholarModal';
+        modal.style.cssText = `
+            position:fixed;top:0;left:0;width:100%;height:100%;z-index:99999;
+            display:flex;flex-direction:column;
+            font-family:'Noto Sans Bengali',sans-serif;
+            background:linear-gradient(180deg,#E8F5E9 0%,#C8E6C9 100%);
+        `;
 
-      const overlay = document.createElement('div');
-      overlay.id = 'quran-ai-modal';
-      overlay.style.cssText = `
-        position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-        background: rgba(0, 0, 0, 0.6);
-        backdrop-filter: blur(8px);
-        -webkit-backdrop-filter: blur(8px);
-        display: flex; align-items: center; justify-content: center;
-        z-index: 9999999; padding: 20px; box-sizing: border-box;
-        font-family: 'Hind Siliguri', 'Inter', sans-serif;
-      `;
-
-      // Premium Formatting (Matches 2nd photo's bold green headers)
-      const formattedAnswer = answer
-        .replace(/\*\*(.*?)\*\*/g, '<strong style="color: #175033; font-size: 17px; display: block; margin-top: 20px; margin-bottom: 8px;">$1</strong>')
-        .replace(/\n\n/g, '<div style="height:12px"></div>')
-        .replace(/\n/g, '<br>');
-
-      overlay.innerHTML = `
-        <div style="background: #E6F0EA; border-radius: 20px; width: 100%; max-width: 480px; overflow: hidden; box-shadow: 0 15px 40px rgba(0,0,0,0.4); display: flex; flex-direction: column; max-height: 90vh; border: 1px solid rgba(26, 87, 56, 0.1);">
-          
-          <!-- Header (Dark Green - Colourful) -->
-          <div style="background: #1A5738; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; color: white;">
-            <div style="font-size: 19px; font-weight: 800; display: flex; align-items: center; gap: 10px;">
-              <span style="font-size: 20px;">✨</span> AI বিস্তারিত
+        modal.innerHTML = `
+            <!-- Status Bar Area -->
+            <div style="background:linear-gradient(135deg,${T.primary},${T.primaryDark});padding:8px 16px;padding-top:max(8px,env(safe-area-inset-top));">
+                <div style="display:flex;justify-content:space-between;align-items:center;color:rgba(255,255,255,0.8);font-size:12px;">
+                    <span>Islamic Hub</span>
+                    <span style="display:flex;align-items:center;gap:4px;">
+                        <span class="material-symbols-rounded" style="font-size:14px;">wifi</span>
+                        <span class="material-symbols-rounded" style="font-size:14px;">battery_full</span>
+                    </span>
+                </div>
             </div>
-            <button onclick="document.getElementById('quran-ai-modal').remove()" style="background: rgba(255, 255, 255, 0.2); border: none; width: 34px; height: 34px; border-radius: 50%; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: bold; transition: background 0.2s;">
-              ✕
-            </button>
-          </div>
-
-          <!-- Body -->
-          <div style="padding: 24px; overflow-y: auto; color: #2A3B32; line-height: 1.8; font-size: 15px; scrollbar-width: thin; scrollbar-color: #1A5738 #E6F0EA;">
-            <h3 style="color: #175033; font-size: 22px; margin: 0 0 14px 0; font-weight: 900; line-height: 1.4; font-family: 'Inter', sans-serif;">
-              ${question}
-            </h3>
-            <div style="height: 3px; background: #175033; margin-bottom: 24px; width: 60px; border-radius: 2px;"></div>
             
-            <div style="color: #2A3B32;">
-              ${formattedAnswer}
+            <!-- App Bar -->
+            <div style="background:linear-gradient(135deg,${T.primary},${T.primaryLight});padding:16px;box-shadow:0 4px 20px rgba(10,84,56,0.25);">
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <button onclick="AIScholarService.closeView()" style="background:rgba(255,255,255,0.15);border:none;width:44px;height:44px;border-radius:14px;cursor:pointer;color:white;display:flex;align-items:center;justify-content:center;">
+                        <span class="material-symbols-rounded" style="font-size:26px;">arrow_back</span>
+                    </button>
+                    <div style="flex:1;">
+                        <h1 style="margin:0;font-size:22px;color:white;font-weight:800;display:flex;align-items:center;gap:10px;">
+                            <span class="material-symbols-rounded" style="font-size:32px;background:rgba(255,255,255,0.2);padding:8px;border-radius:12px;">psychology</span>
+                            AI স্কলার
+                        </h1>
+                        <p style="margin:4px 0 0 0;font-size:12px;color:rgba(255,255,255,0.85);">📚 কুরআন ও সুন্নাহর আলোকে উত্তর</p>
+                    </div>
+                    <button onclick="AIScholarService.showMenu()" style="background:rgba(255,255,255,0.15);border:none;width:44px;height:44px;border-radius:14px;cursor:pointer;color:white;display:flex;align-items:center;justify-content:center;">
+                        <span class="material-symbols-rounded">more_vert</span>
+                    </button>
+                </div>
             </div>
-          </div>
-
-          <!-- Footer Buttons (Matches 2nd photo's layout) -->
-          <div style="padding: 16px 24px; display: flex; gap: 14px; border-top: 1px solid rgba(26, 87, 56, 0.1); background: #E6F0EA;">
-            <button id="quran-ai-copy-btn" style="flex: 1; padding: 14px; border: 2px solid #1A5738; background: white; color: #1A5738; border-radius: 12px; font-weight: 800; font-size: 15px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s;">
-               <span class="material-symbols-rounded" style="font-size: 18px;">content_copy</span> কপি
-            </button>
             
-            <button onclick="document.getElementById('quran-ai-modal').remove()" style="flex: 1; padding: 14px; border: none; background: #1A5738; color: white; border-radius: 12px; font-weight: 800; font-size: 15px; cursor: pointer; transition: opacity 0.2s;">
-              বন্ধ করুন
-            </button>
-          </div>
-        </div>
-      `;
+            <!-- Quick Questions - Horizontal Scroll -->
+            <div style="background:white;padding:12px 16px;overflow-x:auto;display:flex;gap:10px;border-bottom:1px solid #e5e7eb;box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+                ${QUICK_QUESTIONS.map(item => `
+                    <div onclick="AIScholarService.askQuick('${item.q}')" 
+                        style="display:flex;align-items:center;gap:6px;padding:10px 16px;border-radius:14px;white-space:nowrap;cursor:pointer;font-weight:600;font-size:13px;
+                        background:linear-gradient(135deg,${T.primary}15,${T.primaryLight}10);color:${T.primary};border:1.5px solid ${T.primary}40;transition:all 0.2s;">
+                        <span class="material-symbols-rounded" style="font-size:18px;">${item.icon}</span>
+                        ${item.q}
+                    </div>
+                `).join('')}
+            </div>
+            
+            <!-- Chat Messages -->
+            <div id="aiChatMessages" style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:16px;background:linear-gradient(180deg,transparent,rgba(255,255,255,0.5));">
+                ${history.length === 0 ? `
+                    <!-- Welcome Card -->
+                    <div style="text-align:center;padding:30px 20px;">
+                        <div style="width:120px;height:120px;border-radius:50%;background:linear-gradient(135deg,${T.primary},${T.primaryLight});display:flex;align-items:center;justify-content:center;margin:0 auto 24px;box-shadow:0 16px 48px rgba(10,84,56,0.25);">
+                            <span class="material-symbols-rounded" style="font-size:60px;color:white;">mosque</span>
+                        </div>
+                        <h2 style="color:${T.primary};margin:0 0 8px 0;font-size:24px;">আসসালামু আলাইকুম</h2>
+                        <p style="color:#6b7280;font-size:14px;margin:0 0 20px 0;">আপনার ইসলামিক প্রশ্ন জিজ্ঞাসা করুন</p>
+                        <div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;">
+                            <div style="background:white;padding:10px 16px;border-radius:12px;border:1px solid #e5e7eb;font-size:12px;color:${T.primary};display:flex;align-items:center;gap:6px;">
+                                <span class="material-symbols-rounded" style="font-size:16px;">menu_book</span> কুরআন ব্যাখ্যা
+                            </div>
+                            <div style="background:white;padding:10px 16px;border-radius:12px;border:1px solid #e5e7eb;font-size:12px;color:${T.primary};display:flex;align-items:center;gap:6px;">
+                                <span class="material-symbols-rounded" style="font-size:16px;">gavel</span> ফিকাহ বিধান
+                            </div>
+                            <div style="background:white;padding:10px 16px;border-radius:12px;border:1px solid #e5e7eb;font-size:12px;color:${T.primary};display:flex;align-items:center;gap:6px;">
+                                <span class="material-symbols-rounded" style="font-size:16px;">favorite</span> দোয়া শিক্ষা
+                            </div>
+                        </div>
+                    </div>
+                ` : history.map((msg, idx) => `
+                    <!-- Chat Item -->
+                    <div style="display:flex;flex-direction:column;gap:10px;">
+                        <!-- User Question -->
+                        <div style="align-self:flex-end;display:flex;align-items:flex-end;gap:8px;max-width:85%;">
+                            <div style="background:linear-gradient(135deg,${T.primary},${T.primaryLight});color:white;padding:14px 18px;border-radius:20px 20px 4px 20px;font-size:14px;box-shadow:0 4px 12px rgba(10,84,56,0.2);line-height:1.5;">
+                                ${msg.question}
+                            </div>
+                        </div>
+                        <!-- AI Answer -->
+                        <div style="align-self:flex-start;display:flex;align-items:flex-start;gap:8px;max-width:90%;">
+                            <div style="width:36px;height:36px;border-radius:12px;background:linear-gradient(135deg,${T.primary},${T.primaryLight});display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                <span class="material-symbols-rounded" style="color:white;font-size:20px;">psychology</span>
+                            </div>
+                            <div class="ai-answer-container" data-answer="${msg.answer.replace(/"/g, '&quot;').replace(/\n/g, ' ')}" style="background:white;border:1px solid #e5e7eb;padding:16px 18px;border-radius:4px 20px 20px 20px;font-size:14px;line-height:1.8;box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+                                <div class="ai-answer-text" style="color:#374151;">${formatAnswer(msg.answer)}</div>
+                                <div style="display:flex;gap:8px;margin-top:14px;padding-top:12px;border-top:1px solid #e5e7eb;">
+                                    <button onclick="AIScholarService.copyAnswer(this)" style="background:${T.surface};border:1px solid #e5e7eb;padding:8px 14px;border-radius:10px;cursor:pointer;font-size:12px;color:${T.primary};display:flex;align-items:center;gap:4px;font-weight:600;">
+                                        <span class="material-symbols-rounded" style="font-size:16px;">content_copy</span> কপি
+                                    </button>
+                                    <button onclick="AIScholarService.shareAnswer(this, '${msg.question.replace(/'/g, "\\'")}')" style="background:${T.surface};border:1px solid #e5e7eb;padding:8px 14px;border-radius:10px;cursor:pointer;font-size:12px;color:${T.primary};display:flex;align-items:center;gap:4px;font-weight:600;">
+                                        <span class="material-symbols-rounded" style="font-size:16px;">share</span> শেয়ার
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+            
+            <!-- Input Area - Bottom -->
+            <div style="background:white;padding:12px 16px;padding-bottom:max(12px,env(safe-area-inset-bottom));border-top:1px solid #e5e7eb;box-shadow:0 -4px 20px rgba(0,0,0,0.08);">
+                <div style="display:flex;gap:10px;align-items:flex-end;">
+                    <div style="flex:1;background:#f3f4f6;border-radius:20px;display:flex;align-items:flex-end;padding:4px;position:relative;overflow:hidden;">
+                        <textarea id="aiChatInput" placeholder="আপনার প্রশ্ন লিখুন..." rows="1"
+                            style="flex:1;padding:12px 16px;border:none;font-size:15px;resize:none;max-height:100px;background:transparent;color:#1f2937;font-family:inherit;outline:none;line-height:1.5;"
+                            onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault();AIScholarService.sendFromUI();}"></textarea>
+                    </div>
+                    <button onclick="AIScholarService.sendFromUI()" id="aiSendBtn" style="width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,${T.primary},${T.primaryLight});border:none;cursor:pointer;color:white;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(10,84,56,0.3);">
+                        <span class="material-symbols-rounded" style="font-size:26px;">send</span>
+                    </button>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding:0 4px;">
+                    <div style="font-size:11px;color:#9ca3af;display:flex;align-items:center;gap:4px;">
+                        <span class="material-symbols-rounded" style="font-size:14px;">cached</span>
+                        ক্যাশে: ${cacheSize}
+                    </div>
+                    <div style="font-size:11px;color:#9ca3af;">Enter দিয়ে পাঠান</div>
+                </div>
+            </div>
+            
+            <!-- Menu Popup -->
+            <div id="aiMenuPopup" style="display:none;position:absolute;top:80px;right:16px;background:white;border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,0.15);z-index:999999;overflow:hidden;border:1px solid #e5e7eb;min-width:200px;">
+                <div style="padding:12px 16px;font-size:12px;color:#6b7280;border-bottom:1px solid #e5e7eb;background:#f9fafb;">
+                    ⚙️ সেটিংস
+                </div>
+                <button onclick="AIScholarService.showKeyInput()" style="display:flex;align-items:center;gap:12px;width:100%;padding:14px 18px;border:none;background:transparent;cursor:pointer;color:#374151;font-size:14px;text-align:left;font-weight:500;border-top:1px solid #e5e7eb;">
+                    <span class="material-symbols-rounded" style="color:#10b981;">v key</span> API কী সেট করুন
+                </button>
+                <button onclick="AIScholarService.clearHistory();AIScholarService.showView();" style="display:flex;align-items:center;gap:12px;width:100%;padding:14px 18px;border:none;background:transparent;cursor:pointer;color:#374151;font-size:14px;text-align:left;font-weight:500;border-top:1px solid #e5e7eb;">
+                    <span class="material-symbols-rounded" style="color:#dc2626;">delete_forever</span> চ্যাট মুছুন
+                </button>
+                <button onclick="AIScholarService.clearCache()" style="display:flex;align-items:center;gap:12px;width:100%;padding:14px 18px;border:none;background:transparent;cursor:pointer;color:#374151;font-size:14px;text-align:left;font-weight:500;border-top:1px solid #e5e7eb;">
+                    <span class="material-symbols-rounded" style="color:#f59e0b;">cached</span> ক্যাশে মুছুন
+                </button>
 
-      document.body.appendChild(overlay);
+            </div>
+            
+            <style>
+                @keyframes spin { to { transform: rotate(360deg); } }
+                @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+                #aiSendBtn:active { transform: scale(0.95); }
+                #aiChatInput::placeholder { color: #9ca3af; }
+            </style>
+        `;
 
-      // Copy Logic
-      const copyBtn = document.getElementById('quran-ai-copy-btn');
-      copyBtn.onclick = function () {
-        const cleanText = answer.replace(/\*\*/g, '').replace(/<br>/g, '\n');
-        navigator.clipboard.writeText(cleanText).then(() => {
-          const original = copyBtn.innerHTML;
-          copyBtn.innerHTML = '✓ কপি হয়েছে';
-          copyBtn.style.background = '#1A5738';
-          copyBtn.style.color = 'white';
-          setTimeout(() => {
-            copyBtn.innerHTML = original;
-            copyBtn.style.background = 'white';
-            copyBtn.style.color = '#1A5738';
-          }, 2000);
-        });
-      };
-    },
+        document.body.appendChild(modal);
 
-    showBackstory: async (surah, ayah, arabic, bangla, btn) => {
-      const originalHtml = btn.innerHTML;
-      btn.disabled = true;
-      btn.innerHTML = '<span class="material-symbols-rounded">hourglass_top</span>';
-      try {
-        const story = await QuranAPI.getAyahBackstory(surah, ayah, arabic, bangla);
-        UIRenderer.createModal(`আয়াতের বিস্তারিত`, `সূরা ${surah}, আয়াত ${ayah}`, story);
-      } catch (e) {
-        if (typeof showToast !== 'undefined') showToast("লোড করতে সমস্যা হয়েছে।");
-        else alert("লোড করতে সমস্যা হয়েছে।");
-      } finally {
-        btn.disabled = false;
-        btn.innerHTML = originalHtml;
-      }
-    },
+        setTimeout(() => {
+            const msgs = document.getElementById('aiChatMessages');
+            if (msgs) msgs.scrollTop = msgs.scrollHeight;
 
-    showHadithExplanation: async (book, number, text, btn) => {
-      const originalHtml = btn.innerHTML;
-      btn.disabled = true;
-      btn.innerHTML = '<span class="material-symbols-rounded">hourglass_top</span> লোড হচ্ছে...';
-      try {
-        const exp = await HadithAPI.getHadithExplanation(book, number, text);
-        UIRenderer.createModal(`হাদিস ব্যাখ্যা`, `${book} - হাদিস নং ${number}`, exp);
-      } catch (e) {
-        if (typeof showToast !== 'undefined') showToast("লোড করতে সমস্যা হয়েছে।");
-        else alert("লোড করতে সমস্যা হয়েছে।");
-      } finally {
-        btn.disabled = false;
-        btn.innerHTML = originalHtml;
-      }
-    },
-
-    showHadithVerification: async (book, number, arabic, bangla, btn) => {
-      const originalHtml = btn.innerHTML;
-      btn.disabled = true;
-      btn.innerHTML = '<span class="material-symbols-rounded">hourglass_top</span>';
-      try {
-        const result = await HadithAPI.verifyHadith(book, number, arabic, bangla);
-        UIRenderer.createModal(`হাদিস যাচাই`, `${book} - #${number}`, result);
-      } catch (e) {
-        if (typeof showToast !== 'undefined') showToast("যাচাই করতে সমস্যা হয়েছে।");
-        else alert("যাচাই করতে সমস্যা হয়েছে।");
-      } finally {
-        btn.disabled = false;
-        btn.innerHTML = originalHtml;
-      }
+            if (initialQuestion) {
+                if (initialAnswer) {
+                    renderQuestionAnswer(initialQuestion, initialAnswer, true);
+                } else {
+                    const input = document.getElementById('aiChatInput');
+                    if (input) {
+                        input.value = initialQuestion;
+                        sendFromUI();
+                    }
+                }
+            }
+        }, 100);
     }
-  };
 
-  // Audio Controller for simple ayah playback with memory management
-  let currentAudioInstance = null;
-  const AudioController = {
-    stop: () => {
-      if (currentAudioInstance) {
-        currentAudioInstance.pause();
-        currentAudioInstance.src = "";
-        currentAudioInstance = null;
-      }
-      // Stop Advanced Player if it's playing
-      if (AdvancedAudioPlayer && typeof AdvancedAudioPlayer.stop === 'function') {
-        AdvancedAudioPlayer.stop();
-      }
-      document.querySelectorAll('.playing-ayah, .playing').forEach(el => el.classList.remove('playing-ayah', 'playing'));
-      const floatingPlayer = document.getElementById('floatingPlayer');
-      if (floatingPlayer) floatingPlayer.classList.remove('show');
-    },
-    play: (surahNum, ayahNum, totalAyahs) => {
-      AudioController.stop();
-      const qari = localStorage.getItem('preferredQari') || 'ar.alafasy';
-      const url = `https://cdn.islamic.network/quran/audio/128/${qari}/${surahNum}${ayahNum}.mp3`;
-      currentAudioInstance = new Audio(url);
-      currentAudioInstance.onended = () => {
-        const isAutoEnabled = localStorage.getItem('autoAdvance') === 'true';
-        if (ayahNum < totalAyahs) {
-          if (isAutoEnabled) {
-            AudioController.play(surahNum, ayahNum + 1, totalAyahs);
-            document.getElementById(`ayah-${ayahNum + 1}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          } else {
-            AudioController.stop();
-          }
-        } else {
-          AudioController.stop();
+    function closeView() {
+        const modal = document.getElementById('aiScholarModal');
+        if (modal) modal.style.display = 'none';
+    }
+
+    function showMenu() {
+        const popup = document.getElementById('aiMenuPopup');
+        if (popup) {
+            popup.style.display = popup.style.display === 'block' ? 'none' : 'block';
         }
-      };
-      currentAudioInstance.play().catch(e => console.log("Audio play failed", e));
     }
-  };
 
-  // Expose AudioController globally
-  global.AudioController = AudioController;
-
-  // Final Module Exposure to global scope
-  global.IslamicModule = {
-    init: async () => {
-      try { await initDB(); } catch (e) { console.warn("DB Init failed", e); }
-    },
-    Quran: {
-      ...QuranAPI,
-      toggleAutoAdvance,
-      getAutoAdvance: () => autoAdvanceEnabled
-    },
-    Hadith: HadithAPI,
-    UI: UIRenderer,
-    AudioManager: AudioManagerObj,
-    Player: AdvancedAudioPlayer,
-    OfflineManager: OfflineManager,
-    View: ViewObject,
-    getAICache,
-    setAICache,
-    renderDuaSection: (container, catId) => {
-      if (typeof window.renderDuaSection === 'function') {
-        window.renderDuaSection(container, catId);
-      } else {
-        console.error("renderDuaSection not found in global scope");
-      }
+    function clearCache() {
+        localStorage.removeItem('ai_response_cache');
+        showToast('ক্যাশে মুছে ফেলা হয়েছে');
+        showView();
     }
-  };
-})(window);
+
+    function askQuick(question) {
+        const input = document.getElementById('aiChatInput');
+        if (input) {
+            input.value = question;
+            sendFromUI();
+        }
+    }
+
+    function renderQuestionAnswer(question, answer, isOffline = false) {
+        const messagesDiv = document.getElementById('aiChatMessages');
+        const T = THEME;
+        if (!messagesDiv) return;
+
+        const welcome = messagesDiv.querySelector('div[style*="text-align:center"]');
+        if (welcome) welcome.remove();
+
+        const container = document.createElement('div');
+        container.style.cssText = 'display:flex;flex-direction:column;gap:10px;';
+        container.innerHTML = `
+            <div style="align-self:flex-end;background:linear-gradient(135deg,${T.primary},${T.primaryLight});color:white;padding:14px 18px;border-radius:20px 20px 4px 20px;max-width:85%;font-size:14px;box-shadow:0 4px 12px rgba(10,84,56,0.2);">${question}</div>
+            <div style="align-self:flex-start;display:flex;align-items:flex-start;gap:8px;max-width:90%;">
+                <div style="width:36px;height:36px;border-radius:12px;background:linear-gradient(135deg,${T.primary},${T.primaryLight});display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <span class="material-symbols-rounded" style="color:white;font-size:20px;">psychology</span>
+                </div>
+                <div class="ai-answer-container" data-answer="${answer.replace(/"/g, '&quot;').replace(/\n/g, ' ')}" style="background:white;border:1px solid #e5e7eb;padding:16px 18px;border-radius:4px 20px 20px 20px;font-size:14px;line-height:1.8;box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+                    <div class="ai-answer-text" style="color:#374151;">${formatAnswer(answer)}</div>
+                    ${isOffline ? '<div style="font-size:10px;color:#10b981;margin-top:10px;display:flex;align-items:center;gap:4px;"><span class="material-symbols-rounded" style="font-size:12px;">offline_pin</span> অফলাইন থেকে</div>' : ''}
+                    <div style="display:flex;gap:8px;margin-top:14px;padding-top:12px;border-top:1px solid #e5e7eb;">
+                        <button onclick="AIScholarService.copyAnswer(this)" style="background:${T.surface};border:1px solid #e5e7eb;padding:8px 14px;border-radius:10px;cursor:pointer;font-size:12px;color:${T.primary};display:flex;align-items:center;gap:4px;font-weight:600;">
+                            <span class="material-symbols-rounded" style="font-size:16px;">content_copy</span> কপি
+                        </button>
+                        <button onclick="AIScholarService.shareAnswer(this, '${question.replace(/'/g, "\\'")}')" style="background:${T.surface};border:1px solid #e5e7eb;padding:8px 14px;border-radius:10px;cursor:pointer;font-size:12px;color:${T.primary};display:flex;align-items:center;gap:4px;font-weight:600;">
+                            <span class="material-symbols-rounded" style="font-size:16px;">share</span> শেয়ার
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        messagesDiv.appendChild(container);
+
+        const history = getHistory();
+        history.push({ question, answer: answer, timestamp: Date.now() });
+        saveHistory(history);
+
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+
+    async function sendFromUI() {
+        const input = document.getElementById('aiChatInput');
+        const sendBtn = document.getElementById('aiSendBtn');
+        const messagesDiv = document.getElementById('aiChatMessages');
+        const T = THEME;
+
+        if (!input || !messagesDiv) return;
+
+        const question = input.value.trim();
+        if (!question) return;
+
+        const menu = document.getElementById('aiMenuPopup');
+        if (menu) menu.style.display = 'none';
+
+        const welcome = messagesDiv.querySelector('div[style*="text-align:center"]');
+        if (welcome) welcome.remove();
+
+        // Add user message
+        const userContainer = document.createElement('div');
+        userContainer.style.cssText = 'display:flex;flex-direction:column;gap:10px;';
+        userContainer.innerHTML = `
+            <div style="align-self:flex-end;background:linear-gradient(135deg,${T.primary},${T.primaryLight});color:white;padding:14px 18px;border-radius:20px 20px 4px 20px;max-width:85%;font-size:14px;box-shadow:0 4px 12px rgba(10,84,56,0.2);">${question}</div>
+        `;
+        messagesDiv.appendChild(userContainer);
+
+        input.value = '';
+        input.disabled = true;
+        sendBtn.disabled = true;
+
+        // Add loading
+        const loadingMsg = document.createElement('div');
+        loadingMsg.id = 'aiLoadingMsg';
+        loadingMsg.style.cssText = 'align-self:flex-start;display:flex;align-items:flex-start;gap:8px;max-width:90%;';
+        loadingMsg.innerHTML = `
+            <div style="width:36px;height:36px;border-radius:12px;background:linear-gradient(135deg,${T.primary},${T.primaryLight});display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <span class="material-symbols-rounded" style="color:white;font-size:20px;">psychology</span>
+            </div>
+            <div style="background:white;border:1px solid #e5e7eb;padding:16px 20px;border-radius:4px 20px 20px 20px;box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+                <div style="display:flex;gap:10px;align-items:center;">
+                    <div style="width:20px;height:20px;border:3px solid #e5e7eb;border-top-color:${T.primary};border-radius:50%;animation:spin 1s linear infinite;"></div>
+                    <span style="color:#6b7280;">চিন্তা করছি...</span>
+                </div>
+            </div>
+        `;
+        messagesDiv.appendChild(loadingMsg);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+        try {
+            const result = await sendMessage(question);
+
+            loadingMsg.remove();
+
+            const answerDiv = document.createElement('div');
+            answerDiv.style.cssText = 'align-self:flex-start;display:flex;align-items:flex-start;gap:8px;max-width:90%;';
+            answerDiv.innerHTML = `
+                <div style="width:36px;height:36px;border-radius:12px;background:linear-gradient(135deg,${T.primary},${T.primaryLight});display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <span class="material-symbols-rounded" style="color:white;font-size:20px;">psychology</span>
+                </div>
+                <div class="ai-answer-container" data-answer="${result.text.replace(/"/g, '&quot;').replace(/\n/g, ' ')}" style="background:white;border:1px solid #e5e7eb;padding:16px 18px;border-radius:4px 20px 20px 20px;font-size:14px;line-height:1.8;box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+                    <div class="ai-answer-text" style="color:#374151;">${formatAnswer(result.text)}</div>
+                    ${result.cached ? '<div style="font-size:10px;color:#10b981;margin-top:10px;display:flex;align-items:center;gap:4px;"><span class="material-symbols-rounded" style="font-size:12px;">cached</span> ক্যাশে থেকে</div>' : ''}
+                    <div style="display:flex;gap:8px;margin-top:14px;padding-top:12px;border-top:1px solid #e5e7eb;">
+                        <button onclick="AIScholarService.copyAnswer(this)" style="background:${T.surface};border:1px solid #e5e7eb;padding:8px 14px;border-radius:10px;cursor:pointer;font-size:12px;color:${T.primary};display:flex;align-items:center;gap:4px;font-weight:600;">
+                            <span class="material-symbols-rounded" style="font-size:16px;">content_copy</span> কপি
+                        </button>
+                        <button onclick="AIScholarService.shareAnswer(this, '${question.replace(/'/g, "\\'")}')" style="background:${T.surface};border:1px solid #e5e7eb;padding:8px 14px;border-radius:10px;cursor:pointer;font-size:12px;color:${T.primary};display:flex;align-items:center;gap:4px;font-weight:600;">
+                            <span class="material-symbols-rounded" style="font-size:16px;">share</span> শেয়ার
+                        </button>
+                    </div>
+                </div>
+            `;
+            userContainer.appendChild(answerDiv);
+
+            const history = getHistory();
+            history.push({ question, answer: result.text, timestamp: Date.now() });
+            saveHistory(history);
+
+        } catch (e) {
+            loadingMsg.remove();
+            const errorMsg = document.createElement('div');
+            errorMsg.style.cssText = 'align-self:flex-start;background:linear-gradient(135deg,#fef2f2,#fee2e2);border:1px solid #fecaca;padding:14px 18px;border-radius:4px 20px 20px 20px;max-width:85%;color:#dc2626;';
+            errorMsg.textContent = 'দুঃখিত, উত্তর দিতে সমস্যা হয়েছে। আবার চেষ্টা করুন।';
+            userContainer.appendChild(errorMsg);
+        }
+
+        input.disabled = false;
+        sendBtn.disabled = false;
+        input.focus();
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+
+    function showKeyInput() {
+        showMenu(); // Close menu
+        const currentKey = getUserKey() || '';
+        const currentKeysList = getUserKeysList().join('\n');
+        const currentORKey = localStorage.getItem(USER_OPENROUTER_KEY) || '';
+
+        const modal = document.createElement('div');
+        modal.id = 'aiKeyModal';
+        modal.style.cssText = `
+            position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);
+            display:flex;align-items:center;justify-content:center;z-index:999999;backdrop-filter:blur(8px);
+        `;
+        modal.innerHTML = `
+            <div style="background:white;border-radius:24px;padding:24px;width:95%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,0.3);max-height:90vh;overflow-y:auto;">
+                <h3 style="margin:0 0 16px;color:#0A5438;display:flex;align-items:center;gap:10px;">
+                    <span class="material-symbols-rounded">settings</span> AI সার্ভিস সেটিংস
+                </h3>
+                
+                <div style="margin-bottom:20px;">
+                    <label style="display:block; font-size:12px; color:#6b7280; margin-bottom:5px; font-weight:700;">Gemini Model ID</label>
+                    <input type="text" id="geminiModelInput" value="${getUserModel()}" placeholder="gemini-2.5-flash-lite" 
+                        style="width:100%;padding:12px 16px;border-radius:12px;border:2px solid #e5e7eb;font-size:14px;outline:none;box-sizing:border-box;">
+                </div>
+
+                <div style="margin-bottom:20px;">
+                    <label style="display:block; font-size:12px; color:#6b7280; margin-bottom:5px; font-weight:700;">Gemini API Keys (Rotation)</label>
+                    <p style="font-size:11px; color:#9ca3af; margin-bottom:8px;">প্রতি লাইনে একটি করে কী (Key) দিন। সিস্টেম এগুলো সিরিয়ালি ট্রাই করবে।</p>
+                    <textarea id="geminiKeysListInput" placeholder="AIzaSy...\nAIzaSy..." rows="5"
+                        style="width:100%;padding:12px 16px;border-radius:12px;border:2px solid #e5e7eb;font-size:13px;outline:none;box-sizing:border-box;resize:vertical;font-family:monospace;">${currentKeysList}</textarea>
+                </div>
+
+                <div style="margin-bottom:25px;">
+                    <label style="display:block; font-size:12px; color:#6b7280; margin-bottom:5px; font-weight:700;">OpenRouter API Key (Optional)</label>
+                    <input type="password" id="openRouterKeyInput" value="${currentORKey}" placeholder="sk-or-v1-..." 
+                        style="width:100%;padding:12px 16px;border-radius:12px;border:2px solid #e5e7eb;font-size:14px;outline:none;box-sizing:border-box;">
+                </div>
+
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:15px;">
+                    <button onclick="AIScholarService.importConfig()" style="padding:10px; border-radius:12px; border:1.5px solid #e5e7eb; background:#f9fafb; color:#374151; font-size:12px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px;">
+                        <span class="material-symbols-rounded" style="font-size:18px;">upload_file</span> ইম্পোর্ট (JSON)
+                    </button>
+                    <button onclick="AIScholarService.exportConfig()" style="padding:10px; border-radius:12px; border:1.5px solid #e5e7eb; background:#f9fafb; color:#374151; font-size:12px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px;">
+                        <span class="material-symbols-rounded" style="font-size:18px;">download</span> এক্সপোর্ট (JSON)
+                    </button>
+                </div>
+
+                <div style="display:flex;gap:12px;">
+                    <button onclick="document.getElementById('aiKeyModal').remove()" style="flex:1;padding:14px;border-radius:12px;border:1.5px solid #e5e7eb;background:white;color:#6b7280;font-weight:700;cursor:pointer;">বাতিল</button>
+                    <button onclick="AIScholarService.saveKeyFromUI()" style="flex:1;padding:14px;border-radius:12px;border:none;background:linear-gradient(135deg,#0A5438,#059669);color:white;font-weight:700;cursor:pointer;">সেভ করুন</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    }
+
+    function saveKeyFromUI() {
+        const modelInput = document.getElementById('geminiModelInput');
+        const keysListInput = document.getElementById('geminiKeysListInput');
+        const orKeyInput = document.getElementById('openRouterKeyInput');
+
+        if (modelInput && keysListInput && orKeyInput) {
+            const model = modelInput.value.trim() || 'gemini-2.5-flash-lite';
+            const keysRaw = keysListInput.value.trim();
+            const orKey = orKeyInput.value.trim();
+
+            const keysArray = keysRaw.split('\n')
+                .map(k => k.trim())
+                .filter(k => k.length > 5);
+
+            saveUserModel(model);
+            saveUserKeysList(keysArray);
+            saveOpenRouterKey(orKey);
+
+            if (keysArray.length > 0 || orKey.length > 0) {
+                showToast('সেটিংস সফলভাবে সেভ হয়েছে! ✓');
+                document.getElementById('aiKeyModal').remove();
+            } else if (keysRaw === '' && orKey === '') {
+                localStorage.removeItem(USER_GEMINI_KEY);
+                localStorage.removeItem(USER_GEMINI_MODEL);
+                localStorage.removeItem(USER_GEMINI_KEYS_LIST);
+                localStorage.removeItem(USER_OPENROUTER_KEY);
+                showToast('সেটিংস রিসেট করা হয়েছে');
+                document.getElementById('aiKeyModal').remove();
+            } else {
+                showToast('সঠিক কি (Key) প্রদান করুন');
+            }
+        }
+    }
+
+    return {
+        sendMessage,
+        getHistory,
+        saveHistory,
+        clearHistory,
+        saveUserKey,
+        getUserKey,
+        showView,
+        closeView,
+        sendFromUI,
+        copyToClipboard,
+        shareContent,
+        getCacheSize,
+        formatAnswer,
+        copyAnswer,
+        shareAnswer,
+        showMenu,
+        clearCache,
+        askQuick,
+        showKeyInput,
+        saveKeyFromUI,
+        exportConfig,
+        importConfig,
+        QUICK_QUESTIONS,
+        THEME
+    };
+
+})();
