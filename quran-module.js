@@ -336,20 +336,35 @@
     },
 
     _robustAICall: async (prompt) => {
+      // 1. Setup Models & Keys
       const model = localStorage.getItem('user_gemini_model') || 'gemini-2.5-flash-lite';
       const userKey = localStorage.getItem('user_gemini_api_key');
-      const userKeysList = JSON.parse(localStorage.getItem('user_gemini_keys_list') || '[]');
+      let userKeysList = [];
+      try {
+        const stored = localStorage.getItem('user_gemini_keys_list');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          userKeysList = Array.isArray(parsed) ? parsed : [parsed];
+        }
+      } catch (e) {
+        const raw = localStorage.getItem('user_gemini_keys_list');
+        if (raw && raw.trim().startsWith('AIza')) userKeysList = [raw.trim()];
+      }
       const orKey = localStorage.getItem('user_openrouter_key') || (window.APP_SECRETS && window.APP_SECRETS.OPENROUTER_KEY) || '';
 
+      // Collect all Gemini keys
       const allKeys = [];
       if (userKey) allKeys.push(userKey);
       userKeysList.forEach(k => { if (!allKeys.includes(k)) allKeys.push(k); });
 
-      // Shuffle system keys
-      const shuffledSystem = [...QuranAPI.DEFAULT_AI_KEYS].sort(() => 0.5 - Math.random());
+      // Shuffle and add system fallback keys
+      const systemKeys = (window.APP_SECRETS && window.APP_SECRETS.GEMINI_KEYS) || QuranAPI.DEFAULT_AI_KEYS || [];
+      const shuffledSystem = [...systemKeys].sort(() => 0.5 - Math.random());
       shuffledSystem.forEach(k => { if (!allKeys.includes(k)) allKeys.push(k); });
 
-      // 1. Try All Gemini Keys
+      console.log(`[AI] Starting call with model: ${model}, keys available: ${allKeys.length}`);
+
+      // 2. Try All Gemini Keys
       for (const key of allKeys) {
         try {
           const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`, {
@@ -357,32 +372,56 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
           });
+
+          if (!res.ok) {
+            const errBody = await res.json().catch(() => ({}));
+            console.warn(`[AI] Gemini Key ${key.substring(0, 5)} failed (${res.status}):`, errBody.error?.message || 'Unknown error');
+            continue;
+          }
+
           const data = await res.json();
-          if (data?.candidates?.[0]?.content?.parts?.[0]?.text) return data.candidates[0].content.parts[0].text;
-        } catch (e) { }
+          const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (text) return text;
+
+        } catch (e) {
+          console.error(`[AI] Gemini Fetch Exception:`, e.message);
+        }
       }
 
-      // 2. Fallback to OpenRouter
+      // 3. Fallback to OpenRouter
       if (orKey) {
-        for (const orModel of QuranAPI.OPENROUTER_MODELS) {
+        console.log('[AI] Gemini failed, attempting OpenRouter fallback...');
+        const orModels = JSON.parse(localStorage.getItem('user_openrouter_models_list') || '[]').length > 0
+          ? JSON.parse(localStorage.getItem('user_openrouter_models_list'))
+          : (QuranAPI.OPENROUTER_MODELS || ['stepfun/step-3.5-flash:free']);
+
+        for (const orModel of orModels) {
           try {
             const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
               method: 'POST',
               headers: {
                 'Authorization': `Bearer ${orKey}`,
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'HTTP-Referer': 'https://jubosongho.com',
+                'X-Title': 'Islamic Hub'
               },
               body: JSON.stringify({
                 model: orModel,
                 messages: [{ role: "user", content: prompt }]
               })
             });
+
+            if (!res.ok) continue;
+
             const data = await res.json();
             if (data.choices?.[0]?.message?.content) return data.choices[0].message.content;
-          } catch (e) { }
+          } catch (e) {
+            console.warn(`[AI] OpenRouter model ${orModel} failed:`, e.message);
+          }
         }
       }
 
+      console.error('[AI] All AI services failed.');
       return null;
     }
   };
