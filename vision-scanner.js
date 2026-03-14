@@ -4,40 +4,8 @@ const VisionService = (() => {
     // AI-Powered Image Analysis with JSON Output (gemini-2.5-flash-lite)
     // ════════════════════════════════════════════════════════════════
 
-    const DEFAULT_GEMINI_KEYS = [
-        'AIzaSyDY-piqi2nOC-jh0q0V-XqdEycVZJFH38w', 'AIzaSyCeW9sWOcZyhV4CI1nRPh2G1W5DfWgS4Lk',
-        'AIzaSyChQLS8hZ7AwCAiaK-MCfJ8Q2L87m59H3k', 'AIzaSyA3Cw7_9KXn832-Lq2tqsuY223WruDuf4s',
-        'AIzaSyAoKBBYcnUNuppcFllz-g-5PNGD4mdWx6c', 'AIzaSyDvFANuMCN8TT0fnMmdLQ3xjeJVuhyz_r8',
-        'AIzaSyDiRym0MivFJ7r-0H-ozL4p_ZhktA2x_J4', 'AIzaSyAvBa2byk4MdV5PpRH8maMdf1QszODjghQ',
-        'AIzaSyAXe-AajKdGgm4WCCvBqiYyLKh_tdNSH5Y', 'AIzaSyDScRt4CCopvbmvCpv9DQ0fYD1wCghduHk',
-        'AIzaSyBvaBottdBHjiReEXIcYu7BjDpDJDpanKA', 'AIzaSyA5I3VeU9uIQkWqb7iwEtU9e8zM35pr9j0',
-        'AIzaSyALRHmzuJ-jO_Z9qHDIrq27OEgjSjGMYMw', 'AIzaSyDYaRWNJMjWKVAC9KvkvCnBMD9-UM6M2hc',
-        'AIzaSyCzS7VIaXlFcnUzORhZsxRNXOtIelGSND4', 'AIzaSyAfY5HyALrJnPJg13jF-PAMlitkwswZ0_Q',
-        'AIzaSyC5Sr3T1sCyq-lYL1KJOZxdvI43ijON_Bg', 'AIzaSyAJpW3ni-XhScWbu8A7ia9mK_APpbxB5Qg',
-        'AIzaSyAF1kutfxrQp51jB8D-6nFy7NE754v6zYY', 'AIzaSyCEP5U4kGX6k2CiP6YPW-rT2z4dmMUkruk',
-        'AIzaSyBHEW0BTJ_3Fsb2CmTAdYyEiJwZFIF9au0', 'AIzaSyDjVqe3eK3Zi3Wxr4_0jAG3Q-mjDZbMJm4',
-        'AIzaSyCd4uNLzoKb855LKkyLVFysG7ARbjk2GLw', 'AIzaSyCMdl6PrZnz-WrLkLHldeAo0hWDmLhunbI',
-        'AIzaSyB4D4t8G3dOAovKu1H6NxasqCl10SV0qAQ', 'AIzaSyDye2YKhlubLC5qk673fO1oR9JcmyLNWQY',
-        'AIzaSyBkJULuyFkcIZm2VNtVIdrJnwswZ7TOhSo', 'AIzaSyCczn6U2g1_V1dCh3HpTcd4o7et8AN8dBU',
-        'AIzaSyB01AY78Q-QELswFceInH4QXCAahcWWgRQ', 'AIzaSyBF_Me7hyGPrFx4zxmPTxYKRVthvn5WzkU',
-        'AIzaSyCmQblrYpyHyTigs9Y1pXcyS7_kZn8Z8FU', 'AIzaSyCgy20dLWNFQHdEy2n9R-NQv4PokZR6ZVY',
-        'AIzaSyDCC4uozEySlhLHxA3ZQyU9B9CRlfiNOD8', 'AIzaSyA59Gbk2Qu-ruIuy-UXQjGoddAPow_7ZLI',
-        'AIzaSyBj94ubLWE6a3oTzwmDZ7TIJ6LDAdrW4qo', 'AIzaSyBesLNkJuVRk5ngBk0jn729Qty3ZKmNPjo',
-        'AIzaSyCLwS0AKN8UC1mjJr6GJ5F5kRL6QO9c58g', 'AIzaSyDS5KWkDZoakSHbAEVV3JjnqcOxtdqNvLs',
-        'AIzaSyAuOs_zpKbDysa7ThXxF86ejV1Mz8PhHKo', 'AIzaSyBRFr2dwYV-AT_-iF6YMUVireXeh-GYMFA',
-        'AIzaSyBa19RL545bwFsTFyARAPpBtcRvEu1P_5o', 'AIzaSyDKH3zNRNEph7I9ez4Zp78HNB8qJjjDMv4',
-        'AIzaSyCCB2S3pAV8hpeiDyMhAnyDxrQl5gjTNHE', 'AIzaSyDxdxHYI4EcK3SRLXMdrbon4HaAEAo0hFQ',
-        'AIzaSyCzxdThXlHN314kx4VOMlY7OrLfBrZn7ps', 'AIzaSyC2uPNFRF8WevWZFXRcif8y2-2-gAtCyiQ',
-        'AIzaSyCtaVpsQDhKwCw_anh1GtxWkpnBx1PrNmU', 'AIzaSyBobzKWPHIkaudIayB_pIheo5vd5dcI_Co',
-        'AIzaSyDZIebPpdzkCsXDQTNvCPd-Rr4yT10pOhY', 'AIzaSyCZg5v7vHtNQTHp24maN-Wr_H4qaJqO8fI',
-        'AIzaSyAnWffFLAdGMe-w5La_WcTVBtbfUwMzHbo', 'AIzaSyDcSA5lBnFu8sG6k-beulRhw7SeFK4lqyQ',
-        'AIzaSyDYPNDsZWu8au6Yq9qtTkR_3nUmSFy7ZBI', 'AIzaSyAaxRE3_Amg2oFwIOZPSHL3tNwr7lRtdlc',
-        'AIzaSyCQ5AyFHASLqhw-l9akOrTpuOj6itBQ0VU', 'AIzaSyCqcqxGqzBlmC6EgMQzf9nOtpHOW0-oM30',
-        'AIzaSyCtAbPFKD_uKNPJn5eeMg3-ZXJ_EccZdow', 'AIzaSyB0PgW6Uw6090vCW5PdXQNN8XkZ1SLlAEE',
-        'AIzaSyC6RZ4WuDR9ji4uB48_yYJW6hbjB7VWm00', 'AIzaSyDxUKl0NRe5AoR7AzOkJEtCM4TOVQxFFqY',
-        'AIzaSyDrZGM42F3gHnI5HOz51-pr6Q3qh80x38U', 'AIzaSyCvyMU4Gp5BJkTVbyYc3RFWdOnD9e-5fWM',
-        'AIzaSyCb604TCm9Itwtl6fJ3LtmTkKCFEIHZ0cU', 'AIzaSyAOOn2HUSp-SUIOoNHGTm7T9ItriuaB06A'
-    ];
+    // Keys are now managed via secrets.js or window.APP_SECRETS
+    const DEFAULT_GEMINI_KEYS = (window.APP_SECRETS && window.APP_SECRETS.GEMINI_KEYS) || [];
 
     const USER_GEMINI_KEY = 'user_gemini_api_key';
     const VISION_MODEL = 'gemini-2.5-flash-lite';
@@ -99,7 +67,8 @@ Analyze the provided image and return a **valid JSON object** with the following
 - Do not include any text outside the JSON object.`;
 
     async function callGeminiVisionApi(apiKey, base64Image) {
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${VISION_MODEL}:generateContent?key=${apiKey}`;
+        const userModel = localStorage.getItem('user_gemini_model') || VISION_MODEL;
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${userModel}:generateContent?key=${apiKey}`;
 
         const body = {
             contents: [
@@ -129,57 +98,45 @@ Analyze the provided image and return a **valid JSON object** with the following
 
         if (!response.ok) {
             const errorText = await response.text();
-            // Handle specific model errors
-            if (errorText.includes('does not support image input') || errorText.includes('image.png')) {
-                throw new Error('এই AI মডেলটি ছবি পড়তে পারে না। অনুগ্রহ করে আবার চেষ্টা করুন।');
-            }
-            throw new Error(`API failed (${response.status}): ${errorText}`);
+            throw new Error(`API failed (${response.status})`);
         }
 
         const data = await response.json();
         const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (!text) throw new Error('No response content from AI');
+        if (!text) throw new Error('No response content');
 
         try {
             return JSON.parse(text);
         } catch (e) {
-            console.error('[Vision] Invalid JSON:', text);
-            throw new Error('AI returned invalid JSON. Please try again.');
+            throw new Error('Invalid JSON response');
         }
     }
 
     async function scanImage(base64Image) {
         let result = null;
         let success = false;
-        let usedKey = null;
         let lastError = '';
 
         const userKey = localStorage.getItem(USER_GEMINI_KEY);
-        if (userKey && userKey.length > 10) {
-            try {
-                console.log('[Vision] Trying user key...');
-                result = await callGeminiVisionApi(userKey, base64Image);
-                success = true;
-                usedKey = 'User Key';
-            } catch (e) {
-                console.warn('[Vision] User key failed:', e.message);
-                lastError = e.message;
-            }
-        }
+        const userKeysList = JSON.parse(localStorage.getItem('user_gemini_keys_list') || '[]');
 
-        if (!success) {
-            const _shuffledKeys = [...DEFAULT_GEMINI_KEYS].sort(() => 0.5 - Math.random());
-            for (let i = 0; i < _shuffledKeys.length; i++) {
-                try {
-                    console.log(`[Vision] Trying default key ${i + 1}...`);
-                    result = await callGeminiVisionApi(_shuffledKeys[i], base64Image);
+        const allKeys = [];
+        if (userKey) allKeys.push(userKey);
+        userKeysList.forEach(k => { if (!allKeys.includes(k)) allKeys.push(k); });
+
+        // Shuffle and add system keys
+        const shuffledSystem = [...DEFAULT_GEMINI_KEYS].sort(() => 0.5 - Math.random());
+        shuffledSystem.forEach(k => { if (!allKeys.includes(k)) allKeys.push(k); });
+
+        for (const key of allKeys) {
+            try {
+                result = await callGeminiVisionApi(key, base64Image);
+                if (result) {
                     success = true;
-                    usedKey = `Default Key ${i + 1}`;
                     break;
-                } catch (e) {
-                    console.warn(`[Vision] Key-${i + 1} failed:`, e.message);
-                    lastError = e.message;
                 }
+            } catch (e) {
+                lastError = e.message;
             }
         }
 
@@ -189,27 +146,15 @@ Analyze the provided image and return a **valid JSON object** with the following
                 bengaliPronunciation: '',
                 bengaliMeaning: '',
                 englishMeaning: '',
-                identification: 'দুঃখিত, বর্তমান API কীগুলি কাজ করছে না। অনুগ্রহ করে সেটিংস থেকে আপনার নিজের API কী দিন।',
+                identification: 'সব AI সার্ভিস ব্যস্ত। অনুগ্রহ করে আপনার নিজস্ব API কী দিন।',
                 sourceInfo: null,
                 confidence: 'Low',
-                additionalComments: 'সব সার্ভার চেষ্টা করেও ব্যর্থ। ত্রুটি: ' + lastError,
-                success: false,
-                usedKey: null
+                additionalComments: 'ত্রুটি: ' + lastError,
+                success: false
             };
         }
 
-        const defaultResult = {
-            arabicText: '',
-            bengaliPronunciation: '',
-            bengaliMeaning: '',
-            englishMeaning: '',
-            identification: '',
-            sourceInfo: null,
-            confidence: 'Medium',
-            additionalComments: ''
-        };
-        result = { ...defaultResult, ...result, success: true, usedKey };
-        return result;
+        return { ...result, success: true };
     }
 
     function initScanner() {
