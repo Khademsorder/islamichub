@@ -1,41 +1,14 @@
 const AIScholarService = (() => {
-    const DEFAULT_GEMINI_KEYS = [
-        'AIzaSyDY-piqi2nOC-jh0q0V-XqdEycVZJFH38w', 'AIzaSyCeW9sWOcZyhV4CI1nRPh2G1W5DfWgS4Lk',
-        'AIzaSyChQLS8hZ7AwCAiaK-MCfJ8Q2L87m59H3k', 'AIzaSyA3Cw7_9KXn832-Lq2tqsuY223WruDuf4s',
-        'AIzaSyAoKBBYcnUNuppcFllz-g-5PNGD4mdWx6c', 'AIzaSyDvFANuMCN8TT0fnMmdLQ3xjeJVuhyz_r8',
-        'AIzaSyDiRym0MivFJ7r-0H-ozL4p_ZhktA2x_J4', 'AIzaSyAvBa2byk4MdV5PpRH8maMdf1QszODjghQ',
-        'AIzaSyAXe-AajKdGgm4WCCvBqiYyLKh_tdNSH5Y', 'AIzaSyDScRt4CCopvbmvCpv9DQ0fYD1wCghduHk',
-        'AIzaSyBvaBottdBHjiReEXIcYu7BjDpDJDpanKA', 'AIzaSyA5I3VeU9uIQkWqb7iwEtU9e8zM35pr9j0',
-        'AIzaSyALRHmzuJ-jO_Z9qHDIrq27OEgjSjGMYMw', 'AIzaSyDYaRWNJMjWKVAC9KvkvCnBMD9-UM6M2hc',
-        'AIzaSyCzS7VIaXlFcnUzORhZsxRNXOtIelGSND4', 'AIzaSyAfY5HyALrJnPJg13jF-PAMlitkwswZ0_Q',
-        'AIzaSyC5Sr3T1sCyq-lYL1KJOZxdvI43ijON_Bg', 'AIzaSyAJpW3ni-XhScWbu8A7ia9mK_APpbxB5Qg',
-        'AIzaSyAF1kutfxrQp51jB8D-6nFy7NE754v6zYY', 'AIzaSyCEP5U4kGX6k2CiP6YPW-rT2z4dmMUkruk',
-        'AIzaSyBHEW0BTJ_3Fsb2CmTAdYyEiJwZFIF9au0', 'AIzaSyDjVqe3eK3Zi3Wxr4_0jAG3Q-mjDZbMJm4',
-        'AIzaSyCd4uNLzoKb855LKkyLVFysG7ARbjk2GLw', 'AIzaSyCMdl6PrZnz-WrLkLHldeAo0hWDmLhunbI',
-        'AIzaSyB4D4t8G3dOAovKu1H6NxasqCl10SV0qAQ', 'AIzaSyDye2YKhlubLC5qk673fO1oR9JcmyLNWQY',
-        'AIzaSyBkJULuyFkcIZm2VNtVIdrJnwswZ7TOhSo', 'AIzaSyCczn6U2g1_V1dCh3HpTcd4o7et8AN8dBU',
-        'AIzaSyB01AY78Q-QELswFceInH4QXCAahcWWgRQ', 'AIzaSyBF_Me7hyGPrFx4zxmPTxYKRVthvn5WzkU',
-        'AIzaSyCmQblrYpyHyTigs9Y1pXcyS7_kZn8Z8FU', 'AIzaSyCgy20dLWNFQHdEy2n9R-NQv4PokZR6ZVY',
-        'AIzaSyDCC4uozEySlhLHxA3ZQyU9B9CRlfiNOD8', 'AIzaSyA59Gbk2Qu-ruIuy-UXQjGoddAPow_7ZLI',
-        'AIzaSyBj94ubLWE6a3oTzwmDZ7TIJ6LDAdrW4qo', 'AIzaSyBesLNkJuVRk5ngBk0jn729Qty3ZKmNPjo',
-        'AIzaSyCLwS0AKN8UC1mjJr6GJ5F5kRL6QO9c58g', 'AIzaSyDS5KWkDZoakSHbAEVV3JjnqcOxtdqNvLs',
-        'AIzaSyAuOs_zpKbDysa7ThXxF86ejV1Mz8PhHKo', 'AIzaSyBRFr2dwYV-AT_-iF6YMUVireXeh-GYMFA',
-        'AIzaSyBa19RL545bwFsTFyARAPpBtcRvEu1P_5o', 'AIzaSyDKH3zNRNEph7I9ez4Zp78HNB8qJjjDMv4',
-        'AIzaSyCCB2S3pAV8hpeiDyMhAnyDxrQl5gjTNHE', 'AIzaSyDxdxHYI4EcK3SRLXMdrbon4HaAEAo0hFQ',
-        'AIzaSyCzxdThXlHN314kx4VOMlY7OrLfBrZn7ps', 'AIzaSyC2uPNFRF8WevWZFXRcif8y2-2-gAtCyiQ',
-        'AIzaSyCtaVpsQDhKwCw_anh1GtxWkpnBx1PrNmU', 'AIzaSyBobzKWPHIkaudIayB_pIheo5vd5dcI_Co',
-        'AIzaSyDZIebPpdzkCsXDQTNvCPd-Rr4yT10pOhY', 'AIzaSyCZg5v7vHtNQTHp24maN-Wr_H4qaJqO8fI',
-        'AIzaSyAnWffFLAdGMe-w5La_WcTVBtbfUwMzHbo', 'AIzaSyDcSA5lBnFu8sG6k-beulRhw7SeFK4lqyQ',
-        'AIzaSyDYPNDsZWu8au6Yq9qtTkR_3nUmSFy7ZBI', 'AIzaSyAaxRE3_Amg2oFwIOZPSHL3tNwr7lRtdlc',
-        'AIzaSyCQ5AyFHASLqhw-l9akOrTpuOj6itBQ0VU', 'AIzaSyCqcqxGqzBlmC6EgMQzf9nOtpHOW0-oM30',
-        'AIzaSyCtAbPFKD_uKNPJn5eeMg3-ZXJ_EccZdow', 'AIzaSyB0PgW6Uw6090vCW5PdXQNN8XkZ1SLlAEE',
-        'AIzaSyC6RZ4WuDR9ji4uB48_yYJW6hbjB7VWm00', 'AIzaSyDxUKl0NRe5AoR7AzOkJEtCM4TOVQxFFqY',
-        'AIzaSyDrZGM42F3gHnI5HOz51-pr6Q3qh80x38U', 'AIzaSyCvyMU4Gp5BJkTVbyYc3RFWdOnD9e-5fWM',
-        'AIzaSyCb604TCm9Itwtl6fJ3LtmTkKCFEIHZ0cU', 'AIzaSyAOOn2HUSp-SUIOoNHGTm7T9ItriuaB06A'
+    // Keys are now managed via secrets.js (local-only) or window.APP_SECRETS
+    // This prevents API key exposure on GitHub.
+    const DEFAULT_GEMINI_KEYS = (window.APP_SECRETS && window.APP_SECRETS.GEMINI_KEYS) || [];
+    const OPENROUTER_KEY = (window.APP_SECRETS && window.APP_SECRETS.OPENROUTER_KEY) || '';
+    const OPENROUTER_MODELS = [
+        'stepfun/step-3.5-flash:free',
+        'arcee-ai/trinity-large-preview:free',
+        'nvidia/nemotron-3-super-120b-a12b:free',
+        'nvidia/nemotron-3-nano-30b-a3b:free'
     ];
-
-    const OPENROUTER_KEY = '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';
-    const OPENROUTER_MODEL = 'google/gemma-3-27b-it:free';
 
     const SYSTEM_PROMPT = `You are a wise and compassionate Islamic Scholar. Provide authentic guidance from Quran and Sunnah.
 
@@ -60,6 +33,10 @@ Keep answers structured, premium, and easy to read. Respond as a flagship Islami
     const CHAT_HISTORY_KEY = 'ai_chat_history';
     const RESPONSE_CACHE_KEY = 'ai_response_cache';
     const USER_GEMINI_KEY = 'user_gemini_api_key';
+    const USER_GEMINI_MODEL = 'user_gemini_model';
+    const USER_GEMINI_KEYS_LIST = 'user_gemini_keys_list';
+    const USER_OPENROUTER_KEY = 'user_openrouter_key';
+    const USER_OPENROUTER_MODELS = 'user_openrouter_models';
 
     // Islamic Green Theme Colors
     const THEME = {
@@ -87,6 +64,94 @@ Keep answers structured, premium, and easy to read. Respond as a flagship Islami
 
     function saveUserKey(key) {
         localStorage.setItem(USER_GEMINI_KEY, key);
+    }
+
+    function getUserModel() {
+        // Strict usage as requested: naming as gemini-2.5-flash-lite
+        return localStorage.getItem(USER_GEMINI_MODEL) || 'gemini-2.5-flash-lite';
+    }
+
+    function saveUserModel(model) {
+        localStorage.setItem(USER_GEMINI_MODEL, model);
+    }
+
+    function getUserKeysList() {
+        try {
+            const data = localStorage.getItem(USER_GEMINI_KEYS_LIST);
+            return data ? JSON.parse(data) : [];
+        } catch (e) { return []; }
+    }
+
+    function saveUserKeysList(list) {
+        localStorage.setItem(USER_GEMINI_KEYS_LIST, JSON.stringify(list));
+    }
+
+    function getOpenRouterKey() {
+        return localStorage.getItem(USER_OPENROUTER_KEY) || OPENROUTER_KEY;
+    }
+
+    function saveOpenRouterKey(key) {
+        localStorage.setItem(USER_OPENROUTER_KEY, key);
+    }
+
+    function getOpenRouterModelsList() {
+        try {
+            const data = localStorage.getItem(USER_OPENROUTER_MODELS);
+            return data ? JSON.parse(data) : OPENROUTER_MODELS;
+        } catch (e) { return OPENROUTER_MODELS; }
+    }
+
+    function saveOpenRouterModelsList(list) {
+        localStorage.setItem(USER_OPENROUTER_MODELS, JSON.stringify(list));
+    }
+
+    function exportConfig() {
+        const config = {
+            model: getUserModel(),
+            geminiKeysList: getUserKeysList(),
+            openRouterKey: localStorage.getItem(USER_OPENROUTER_KEY)
+        };
+        const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'ai-scholar-config.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showToast('Export Successful!');
+    }
+
+    function importConfig() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json';
+        input.onchange = (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (re) => {
+                try {
+                    const config = JSON.parse(re.target.result);
+                    if (config.model) saveUserModel(config.model);
+                    if (config.geminiKeysList) saveUserKeysList(config.geminiKeysList);
+                    if (config.openRouterKey) saveOpenRouterKey(config.openRouterKey || '');
+                    if (config.openRouterModels) saveOpenRouterModelsList(config.openRouterModels);
+
+                    showToast('Import Successful! ✓', 'success');
+                    const modal = document.getElementById('aiKeyModal');
+                    if (modal) {
+                        modal.remove();
+                        showKeyInput();
+                    }
+                } catch (err) {
+                    showToast('Invalid JSON file', 'error');
+                }
+            };
+            reader.readAsText(file);
+        };
+        input.click();
     }
 
     function getHistory() {
@@ -161,7 +226,8 @@ Keep answers structured, premium, and easy to read. Respond as a flagship Islami
     }
 
     async function callGeminiApi(apiKey, message, history) {
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${apiKey}`;
+        const model = getUserModel();
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
         const messages = [
             { role: "user", parts: [{ text: SYSTEM_PROMPT + "\n\nUser Question: " + message }] }
@@ -181,28 +247,37 @@ Keep answers structured, premium, and easy to read. Respond as a flagship Islami
 
     async function callOpenRouter(message, history) {
         const apiUrl = 'https://openrouter.ai/api/v1/chat/completions';
+        const apiKey = getOpenRouterKey();
+        const models = getOpenRouterModelsList();
 
-        const response = await fetch(apiUrl, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${OPENROUTER_KEY}`,
-                'Content-Type': 'application/json',
-                'HTTP-Referer': 'https://jubosongho.com',
-                'X-Title': 'Islamic Hub Web',
-            },
-            body: JSON.stringify({
-                'model': OPENROUTER_MODEL,
-                'messages': [
-                    { 'role': 'system', 'content': SYSTEM_PROMPT },
-                    { 'role': 'user', 'content': message }
-                ],
-            }),
-        });
+        for (const model of models) {
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${apiKey}`,
+                        'Content-Type': 'application/json',
+                        'HTTP-Referer': 'https://jubosongho.com',
+                        'X-Title': 'Islamic Hub Web',
+                    },
+                    body: JSON.stringify({
+                        model: model,
+                        messages: [
+                            { role: "system", content: SYSTEM_PROMPT },
+                            { role: "user", content: message }
+                        ]
+                    })
+                });
 
-        if (!response.ok) throw new Error(`OpenRouter API failed: ${response.status}`);
-
-        const data = await response.json();
-        return data.choices[0].message.content || 'দুঃখিত, কোনো উত্তর পাওয়া যায়নি।';
+                const data = await response.json();
+                if (data.choices && data.choices[0]) {
+                    return data.choices[0].message.content;
+                }
+            } catch (e) {
+                console.warn(`OpenRouter Model ${model} failed, trying next...`);
+            }
+        }
+        throw new Error('All OpenRouter models failed');
     }
 
     async function sendMessage(message) {
@@ -217,26 +292,53 @@ Keep answers structured, premium, and easy to read. Respond as a flagship Islami
         let apiKeyUsed = null;
 
         const userKey = getUserKey();
+        const userKeysList = getUserKeysList();
+        const orKey = getOpenRouterKey();
+        const hasDefaultKeys = DEFAULT_GEMINI_KEYS.length > 0 || OPENROUTER_KEY.length > 0;
+
+        if (!userKey && userKeysList.length === 0 && !hasDefaultKeys && !orKey) {
+            return {
+                text: '⚠️ কোনো API কী (API Key) সেট করা নেই। দয়া করে সেটিংস থেকে আপনার Gemini API কী দিন অথবা secrets.js ফাইলটি কনফিগার করুন।',
+                success: false,
+                errorType: 'MISSING_KEYS'
+            };
+        }
+
+        // 1. Try Individual User Key
         if (userKey && userKey.length > 10) {
             try {
                 responseText = await callGeminiApi(userKey, message, []);
-                apiKeyUsed = 'User Key';
+                apiKeyUsed = 'User individual Key';
                 success = true;
             } catch (e) { console.warn('User Gemini Key failed'); }
         }
 
+        // 2. Try User Multi-Keys List (Rotation)
+        if (!success && userKeysList.length > 0) {
+            for (const key of userKeysList) {
+                try {
+                    responseText = await callGeminiApi(key, message, []);
+                    apiKeyUsed = 'User Multi-Key List';
+                    success = true;
+                    break;
+                } catch (e) { console.warn('User Multi-Key failed'); }
+            }
+        }
+
+        // 3. Try Default System Keys
         if (!success) {
             const _shuffledKeys = [...DEFAULT_GEMINI_KEYS].sort(() => 0.5 - Math.random());
             for (const key of _shuffledKeys) {
                 try {
                     responseText = await callGeminiApi(key, message, []);
-                    apiKeyUsed = 'Default Key';
+                    apiKeyUsed = 'System Rotation Key';
                     success = true;
                     break;
-                } catch (e) { console.warn('Default Key failed'); }
+                } catch (e) { console.warn('System Key failed'); }
             }
         }
 
+        // 4. Try OpenRouter (User or System)
         if (!success) {
             try {
                 responseText = await callOpenRouter(message, []);
@@ -530,12 +632,16 @@ Keep answers structured, premium, and easy to read. Respond as a flagship Islami
                 <div style="padding:12px 16px;font-size:12px;color:#6b7280;border-bottom:1px solid #e5e7eb;background:#f9fafb;">
                     ⚙️ সেটিংস
                 </div>
-                <button onclick="AIScholarService.clearHistory();AIScholarService.showView();" style="display:flex;align-items:center;gap:12px;width:100%;padding:14px 18px;border:none;background:transparent;cursor:pointer;color:#374151;font-size:14px;text-align:left;font-weight:500;">
+                <button onclick="AIScholarService.showKeyInput()" style="display:flex;align-items:center;gap:12px;width:100%;padding:14px 18px;border:none;background:transparent;cursor:pointer;color:#374151;font-size:14px;text-align:left;font-weight:500;border-top:1px solid #e5e7eb;">
+                    <span class="material-symbols-rounded" style="color:#10b981;">v key</span> API কী সেট করুন
+                </button>
+                <button onclick="AIScholarService.clearHistory();AIScholarService.showView();" style="display:flex;align-items:center;gap:12px;width:100%;padding:14px 18px;border:none;background:transparent;cursor:pointer;color:#374151;font-size:14px;text-align:left;font-weight:500;border-top:1px solid #e5e7eb;">
                     <span class="material-symbols-rounded" style="color:#dc2626;">delete_forever</span> চ্যাট মুছুন
                 </button>
                 <button onclick="AIScholarService.clearCache()" style="display:flex;align-items:center;gap:12px;width:100%;padding:14px 18px;border:none;background:transparent;cursor:pointer;color:#374151;font-size:14px;text-align:left;font-weight:500;border-top:1px solid #e5e7eb;">
                     <span class="material-symbols-rounded" style="color:#f59e0b;">cached</span> ক্যাশে মুছুন
                 </button>
+
             </div>
             
             <style>
@@ -722,6 +828,95 @@ Keep answers structured, premium, and easy to read. Respond as a flagship Islami
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
     }
 
+    function showKeyInput() {
+        showMenu(); // Close menu
+        const currentKey = getUserKey() || '';
+        const currentKeysList = getUserKeysList().join('\n');
+        const currentORKey = localStorage.getItem(USER_OPENROUTER_KEY) || '';
+
+        const modal = document.createElement('div');
+        modal.id = 'aiKeyModal';
+        modal.style.cssText = `
+            position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);
+            display:flex;align-items:center;justify-content:center;z-index:999999;backdrop-filter:blur(8px);
+        `;
+        modal.innerHTML = `
+            <div style="background:white;border-radius:24px;padding:24px;width:95%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,0.3);max-height:90vh;overflow-y:auto;">
+                <h3 style="margin:0 0 16px;color:#0A5438;display:flex;align-items:center;gap:10px;">
+                    <span class="material-symbols-rounded">settings</span> AI সার্ভিস সেটিংস
+                </h3>
+                
+                <div style="margin-bottom:20px;">
+                    <label style="display:block; font-size:12px; color:#6b7280; margin-bottom:5px; font-weight:700;">Gemini Model ID</label>
+                    <input type="text" id="geminiModelInput" value="${getUserModel()}" placeholder="gemini-2.5-flash-lite" 
+                        style="width:100%;padding:12px 16px;border-radius:12px;border:2px solid #e5e7eb;font-size:14px;outline:none;box-sizing:border-box;">
+                </div>
+
+                <div style="margin-bottom:20px;">
+                    <label style="display:block; font-size:12px; color:#6b7280; margin-bottom:5px; font-weight:700;">Gemini API Keys (Rotation)</label>
+                    <p style="font-size:11px; color:#9ca3af; margin-bottom:8px;">প্রতি লাইনে একটি করে কী (Key) দিন। সিস্টেম এগুলো সিরিয়ালি ট্রাই করবে।</p>
+                    <textarea id="geminiKeysListInput" placeholder="AIzaSy...\nAIzaSy..." rows="5"
+                        style="width:100%;padding:12px 16px;border-radius:12px;border:2px solid #e5e7eb;font-size:13px;outline:none;box-sizing:border-box;resize:vertical;font-family:monospace;">${currentKeysList}</textarea>
+                </div>
+
+                <div style="margin-bottom:25px;">
+                    <label style="display:block; font-size:12px; color:#6b7280; margin-bottom:5px; font-weight:700;">OpenRouter API Key (Optional)</label>
+                    <input type="password" id="openRouterKeyInput" value="${currentORKey}" placeholder="sk-or-v1-..." 
+                        style="width:100%;padding:12px 16px;border-radius:12px;border:2px solid #e5e7eb;font-size:14px;outline:none;box-sizing:border-box;">
+                </div>
+
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:15px;">
+                    <button onclick="AIScholarService.importConfig()" style="padding:10px; border-radius:12px; border:1.5px solid #e5e7eb; background:#f9fafb; color:#374151; font-size:12px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px;">
+                        <span class="material-symbols-rounded" style="font-size:18px;">upload_file</span> ইম্পোর্ট (JSON)
+                    </button>
+                    <button onclick="AIScholarService.exportConfig()" style="padding:10px; border-radius:12px; border:1.5px solid #e5e7eb; background:#f9fafb; color:#374151; font-size:12px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px;">
+                        <span class="material-symbols-rounded" style="font-size:18px;">download</span> এক্সপোর্ট (JSON)
+                    </button>
+                </div>
+
+                <div style="display:flex;gap:12px;">
+                    <button onclick="document.getElementById('aiKeyModal').remove()" style="flex:1;padding:14px;border-radius:12px;border:1.5px solid #e5e7eb;background:white;color:#6b7280;font-weight:700;cursor:pointer;">বাতিল</button>
+                    <button onclick="AIScholarService.saveKeyFromUI()" style="flex:1;padding:14px;border-radius:12px;border:none;background:linear-gradient(135deg,#0A5438,#059669);color:white;font-weight:700;cursor:pointer;">সেভ করুন</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    }
+
+    function saveKeyFromUI() {
+        const modelInput = document.getElementById('geminiModelInput');
+        const keysListInput = document.getElementById('geminiKeysListInput');
+        const orKeyInput = document.getElementById('openRouterKeyInput');
+
+        if (modelInput && keysListInput && orKeyInput) {
+            const model = modelInput.value.trim() || 'gemini-2.5-flash-lite';
+            const keysRaw = keysListInput.value.trim();
+            const orKey = orKeyInput.value.trim();
+
+            const keysArray = keysRaw.split('\n')
+                .map(k => k.trim())
+                .filter(k => k.length > 5);
+
+            saveUserModel(model);
+            saveUserKeysList(keysArray);
+            saveOpenRouterKey(orKey);
+
+            if (keysArray.length > 0 || orKey.length > 0) {
+                showToast('সেটিংস সফলভাবে সেভ হয়েছে! ✓');
+                document.getElementById('aiKeyModal').remove();
+            } else if (keysRaw === '' && orKey === '') {
+                localStorage.removeItem(USER_GEMINI_KEY);
+                localStorage.removeItem(USER_GEMINI_MODEL);
+                localStorage.removeItem(USER_GEMINI_KEYS_LIST);
+                localStorage.removeItem(USER_OPENROUTER_KEY);
+                showToast('সেটিংস রিসেট করা হয়েছে');
+                document.getElementById('aiKeyModal').remove();
+            } else {
+                showToast('সঠিক কি (Key) প্রদান করুন');
+            }
+        }
+    }
+
     return {
         sendMessage,
         getHistory,
@@ -741,7 +936,12 @@ Keep answers structured, premium, and easy to read. Respond as a flagship Islami
         showMenu,
         clearCache,
         askQuick,
+        showKeyInput,
+        saveKeyFromUI,
+        exportConfig,
+        importConfig,
         QUICK_QUESTIONS,
         THEME
     };
+
 })();
