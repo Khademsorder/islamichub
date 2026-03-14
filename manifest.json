@@ -1,0 +1,33 @@
+{
+  "name": "ইসলামিক জ্ঞান Hub",
+  "short_name": "ইসলামিক জ্ঞান",
+  "description": "সম্পূর্ণ ইসলামিক জ্ঞানকোষ – কুরআন, হাদিস, নামাজ, রোজা, জাকাত, হজ্জ, দোয়া ও ইসলামী জীবনযাত্রা",
+  "start_url": "islamic.html",
+  "display": "standalone",
+  "background_color": "#0d1f1a",
+  "theme_color": "#0b5e42",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "categories": ["education", "religion", "books"],
+  "lang": "bn",
+  "dir": "ltr"
+}

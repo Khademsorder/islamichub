@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="bn">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Islamic Hub</title>
+    <style>
+        :root {
+            --primary: #0a5438;
+            --bg: #f8fafc;
+        }
+
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--bg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: system-ui, -apple-system, sans-serif;
+            overflow: hidden;
+        }
+
+        .loader-container {
+            text-align: center;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .logo {
+            width: 120px;
+            height: 120px;
+            margin-bottom: 24px;
+            filter: drop-shadow(0 10px 20px rgba(10, 84, 56, 0.2));
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(10, 84, 56, 0.1);
+            border-top: 3px solid var(--primary);
+            border-radius: 50%;
+            margin: 0 auto;
+            animation: spin 1s linear infinite;
+        }
+
+        .status {
+            margin-top: 16px;
+            color: var(--primary);
+            font-weight: 600;
+            font-size: 14px;
+            letter-spacing: 0.5px;
+            opacity: 0.8;
+        }
+
+        @keyframes spin {
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="loader-container">
+        <img src="logo.png" alt="Islamic Hub" class="logo" onerror="this.style.display='none'">
+        <div class="spinner"></div>
+        <div class="status">প্রবেশ করছি...</div>
+    </div>
+    <script>
+        // Smooth boot sequence
+        setTimeout(() => {
+            window.location.href = 'islamic.html';
+        }, 800);
+    </script>
+</body>
+
+</html>

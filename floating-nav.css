@@ -1,0 +1,125 @@
+/* ── Floating Navigation Buttons ── */
+.nav-float-btn {
+    position: fixed;
+    bottom: 150px;
+    right: 20px;
+    z-index: 1000;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.6);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--text2);
+    transition: all 0.3s;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.nav-float-btn:hover {
+    background: rgba(255, 255, 255, 0.9);
+    color: var(--accent);
+}
+
+[data-theme="dark"] .nav-float-btn {
+    background: rgba(15, 23, 42, 0.6);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+/* ── Slim Player (Glassmorphic) ── */
+.slim-player {
+    position: fixed;
+    bottom: 90px;
+    left: 15px;
+    right: 15px;
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(20px);
+    border: 1.5px solid rgba(255, 255, 255, 0.3);
+    border-radius: 24px;
+    padding: 12px 18px;
+    z-index: 1001;
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.12);
+    display: none;
+    flex-direction: column;
+    gap: 8px;
+    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s;
+}
+
+[data-theme="dark"] .slim-player {
+    background: rgba(15, 23, 42, 0.75);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+.slim-player.show {
+    display: flex;
+    transform: translateY(0);
+    opacity: 1;
+}
+
+
+/* ── Mini Scroll Controls ── */
+.mini-scroll-controls {
+    position: fixed;
+    right: 15px;
+    bottom: 160px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateX(20px);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.mini-scroll-controls.show {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(0);
+}
+
+.scroll-btn {
+    width: 42px;
+    height: 42px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.scroll-btn:hover {
+    background: var(--accent);
+    color: white;
+    transform: translateY(-3px);
+    box-shadow: 0 10px 30px var(--glow);
+}
+
+.scroll-btn:active {
+    transform: scale(0.9);
+}
+
+.scroll-btn span {
+    font-size: 22px;
+}
+
+[data-theme="dark"] .scroll-btn {
+    background: rgba(30, 41, 59, 0.75);
+    border-color: rgba(255, 255, 255, 0.1);
+    color: var(--accent2);
+}
+
+[data-theme="dark"] .scroll-btn:hover {
+    background: var(--accent2);
+    color: #020617;
+}

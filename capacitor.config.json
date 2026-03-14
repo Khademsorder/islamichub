@@ -1,0 +1,62 @@
+{
+    "appId": "com.islamic.islam",
+    "appName": "Islamic Hub",
+    "webDir": "www",
+    "bundledWebRuntime": false,
+    "npmClient": "npm",
+    "plugins": {
+        "SplashScreen": {
+            "launchShowDuration": 2500,
+            "launchAutoHide": true,
+            "launchFadeOutDuration": 400,
+            "backgroundColor": "#0a5438",
+            "androidSplashResourceName": "splash",
+            "androidScaleType": "CENTER_CROP",
+            "showSpinner": false,
+            "splashFullScreen": true,
+            "splashImmersive": true
+        },
+        "StatusBar": {
+            "style": "LIGHT",
+            "backgroundColor": "#0a5438",
+            "overlaysWebView": false
+        },
+        "Keyboard": {
+            "resize": "body",
+            "resizeOnFullScreen": true
+        },
+        "PushNotifications": {
+            "presentationOptions": [
+                "badge",
+                "sound",
+                "alert"
+            ]
+        },
+        "LocalNotifications": {
+            "smallIcon": "ic_launcher",
+            "iconColor": "#0a5438"
+        },
+        "Preferences": {
+            "group": "IslamicHubStorage"
+        },
+        "NativeBiometric": {
+            "useFallback": true
+        }
+    },
+    "android": {
+        "allowMixedContent": true,
+        "webContentsDebuggingEnabled": false,
+        "backgroundColor": "#0a5438",
+        "initialFocus": false,
+        "overrideUserAgent": "IslamicHub/1.0 Android",
+        "loggingBehavior": "none"
+    },
+    "server": {
+        "androidScheme": "https",
+        "allowNavigation": [
+            "*.googleapis.com",
+            "*.google.com",
+            "*.firebaseapp.com"
+        ]
+    }
+}
