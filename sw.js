@@ -3,7 +3,7 @@
 // Cache everything for zero-data usage
 // ═══════════════════════════════════════════════════
 
-const CACHE_NAME = 'islamic-hub-v6';
+const CACHE_NAME = 'islamic-hub-v10';
 const STATIC_ASSETS = [
   './',
   './islamic.html',
@@ -134,4 +134,3 @@ self.addEventListener('fetch', event => {
     })
   );
 });
-
