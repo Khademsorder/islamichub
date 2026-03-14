@@ -3273,7 +3273,7 @@
           <div style="font-size:11px;color:var(--text-secondary);margin-bottom:8px;">আপনার নিজস্ব কী যোগ করতে পারেন
             (ডিফল্ট ৮টি কী সক্রিয় আছে)</div>
           <input type="password" id="geminiKey" class="settings-input" placeholder="API Key (AIzaSy...)">
-          <input type="text" id="geminiModel" class="settings-input" placeholder="gemini-1.5-flash">
+          <input type="text" id="geminiModel" class="settings-input" placeholder="gemini-2.5-flash-lite">
         </div>
 
         <div class="settings-section">
@@ -3538,7 +3538,7 @@
           const el = document.getElementById(id);
           if (v && el) el.value = v;
         });
-        if (!document.getElementById('geminiModel').value) document.getElementById('geminiModel').value = 'gemini-1.5-flash';
+        if (!document.getElementById('geminiModel').value) document.getElementById('geminiModel').value = 'gemini-2.5-flash-lite';
         if (!document.getElementById('orModel').value) document.getElementById('orModel').value = 'deepseek/deepseek-chat';
         if (!document.getElementById('grokModel').value) document.getElementById('grokModel').value = 'grok-1';
         const parallelEl = document.getElementById('parallelMode');
