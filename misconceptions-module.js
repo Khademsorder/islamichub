@@ -431,9 +431,21 @@ const MisconceptionsModule = (function () {
   };
 
   async function callGeminiAPI(prompt) {
+    const model = localStorage.getItem('user_gemini_model') || 'gemini-2.5-flash-lite';
     const userKey = localStorage.getItem('user_gemini_api_key');
-    const userKeysList = JSON.parse(localStorage.getItem('user_gemini_keys_list') || '[]');
+    let userKeysList = [];
+    try {
+      const stored = localStorage.getItem('user_gemini_keys_list');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        userKeysList = Array.isArray(parsed) ? parsed : [parsed];
+      }
+    } catch (e) {
+      const raw = localStorage.getItem('user_gemini_keys_list');
+      if (raw && raw.trim().startsWith('AIza')) userKeysList = [raw.trim()];
+    }
     const systemKeys = (window.APP_SECRETS && window.APP_SECRETS.GEMINI_KEYS) || [];
+    const orKey = localStorage.getItem('user_openrouter_key') || (window.APP_SECRETS && window.APP_SECRETS.OPENROUTER_KEY) || '';
 
     let allKeys = [];
     if (userKey) allKeys.push(userKey);
@@ -443,9 +455,11 @@ const MisconceptionsModule = (function () {
     const shuffledSystem = [...systemKeys].sort(() => 0.5 - Math.random());
     shuffledSystem.forEach(k => { if (!allKeys.includes(k)) allKeys.push(k); });
 
+    console.log(`[MC-AI] Trying Gemini with model ${model}...`);
+
     for (const key of allKeys) {
       try {
-        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${key}`, {
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -461,10 +475,42 @@ const MisconceptionsModule = (function () {
           return data.candidates[0].content.parts[0].text;
         }
       } catch (e) {
-        console.warn('Key failed:', e.message);
+        console.warn('[MC-AI] Key failed:', e.message);
       }
     }
-    throw new Error('সব API কী ব্যর্থ হয়েছে');
+
+    // OpenRouter Fallback for Misconceptions
+    if (orKey) {
+      console.log('[MC-AI] Gemini failed, attempting OpenRouter fallback...');
+      const orModels = JSON.parse(localStorage.getItem('user_openrouter_models_list') || '[]').length > 0
+        ? JSON.parse(localStorage.getItem('user_openrouter_models_list'))
+        : ['stepfun/step-3.5-flash:free', 'arcee-ai/trinity-large-preview:free'];
+
+      for (const orModel of orModels) {
+        try {
+          const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${orKey}`,
+              'Content-Type': 'application/json',
+              'HTTP-Referer': 'https://jubosongho.com',
+              'X-Title': 'Islamic Hub (Misconceptions)'
+            },
+            body: JSON.stringify({
+              model: orModel,
+              messages: [{ role: "user", content: prompt }]
+            })
+          });
+
+          if (!res.ok) continue;
+
+          const data = await res.json();
+          if (data.choices?.[0]?.message?.content) return data.choices[0].message.content;
+        } catch (e) { }
+      }
+    }
+
+    throw new Error('সব AI সার্ভিস ব্যর্থ হয়েছে');
   }
 
   return {
@@ -485,4 +531,3 @@ const MisconceptionsModule = (function () {
 })();
 
 window.MisconceptionsModule = MisconceptionsModule;
-
