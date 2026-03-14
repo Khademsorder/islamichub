@@ -75,11 +75,32 @@ const AIScholarService = (() => {
     }
 
     function getUserKeysList() {
+        const raw = localStorage.getItem(USER_GEMINI_KEYS_LIST);
+        if (!raw) return [];
         try {
-            const data = localStorage.getItem(USER_GEMINI_KEYS_LIST);
-            return data ? JSON.parse(data) : [];
-        } catch (e) { return []; }
+            const parsed = JSON.parse(raw);
+            return Array.isArray(parsed) ? parsed : [parsed];
+        } catch (e) {
+            // Data Repair: If it's a naked key (starts with AIza), wrap it in an array
+            if (raw.trim().startsWith('AIza')) {
+                const repaired = [raw.trim()];
+                saveUserKeysList(repaired);
+                return repaired;
+            }
+            return [];
+        }
     }
+
+    // Immediate Data Repair on load
+    (() => {
+        const raw = localStorage.getItem(USER_GEMINI_KEYS_LIST);
+        if (raw && raw.trim().startsWith('AIza')) {
+            try { JSON.parse(raw); } catch (e) {
+                localStorage.setItem(USER_GEMINI_KEYS_LIST, JSON.stringify([raw.trim()]));
+                console.log('[AI-Repair] user_gemini_keys_list fixed.');
+            }
+        }
+    })();
 
     function saveUserKeysList(list) {
         localStorage.setItem(USER_GEMINI_KEYS_LIST, JSON.stringify(list));
@@ -133,12 +154,28 @@ const AIScholarService = (() => {
             reader.onload = (re) => {
                 try {
                     const config = JSON.parse(re.target.result);
-                    if (config.model) saveUserModel(config.model);
-                    if (config.geminiKeysList) saveUserKeysList(config.geminiKeysList);
-                    if (config.openRouterKey) saveOpenRouterKey(config.openRouterKey || '');
-                    if (config.openRouterModels) saveOpenRouterModelsList(config.openRouterModels);
+                    // Robust Gemini Model matching
+                    const gModel = config.model || config.gemini_model || config.geminiModel;
+                    if (gModel) saveUserModel(gModel);
 
-                    showToast('Import Successful! ✓', 'success');
+                    // Gemini Keys List
+                    const gKeys = config.geminiKeysList || config.user_gemini_keys_list || config.gemini_keys;
+                    if (gKeys) saveUserKeysList(Array.isArray(gKeys) ? gKeys : gKeys.split(',').map(s => s.trim()));
+
+                    // Single key support
+                    if (config.user_gemini_api_key) saveUserKey(config.user_gemini_api_key);
+
+                    // OpenRouter Settings
+                    const orKey = config.openRouterKey || config.or_key || config.orKey;
+                    if (orKey) saveOpenRouterKey(orKey);
+
+                    const orModels = config.openRouterModels || config.or_models || config.or_model || config.orModels || config.models;
+                    if (orModels) {
+                        const modelsArr = Array.isArray(orModels) ? orModels : String(orModels).split(',').map(s => s.trim());
+                        saveOpenRouterModelsList(modelsArr);
+                    }
+
+                    showToast('Import Successful! ✓');
                     const modal = document.getElementById('aiKeyModal');
                     if (modal) {
                         modal.remove();
