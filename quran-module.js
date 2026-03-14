@@ -277,39 +277,13 @@
     setQari,
 
     // Default API Keys for AI features
-    DEFAULT_AI_KEYS: [
-      'AIzaSyDY-piqi2nOC-jh0q0V-XqdEycVZJFH38w', 'AIzaSyCeW9sWOcZyhV4CI1nRPh2G1W5DfWgS4Lk',
-      'AIzaSyChQLS8hZ7AwCAiaK-MCfJ8Q2L87m59H3k', 'AIzaSyA3Cw7_9KXn832-Lq2tqsuY223WruDuf4s',
-      'AIzaSyAoKBBYcnUNuppcFllz-g-5PNGD4mdWx6c', 'AIzaSyDvFANuMCN8TT0fnMmdLQ3xjeJVuhyz_r8',
-      'AIzaSyDiRym0MivFJ7r-0H-ozL4p_ZhktA2x_J4', 'AIzaSyAvBa2byk4MdV5PpRH8maMdf1QszODjghQ',
-      'AIzaSyAXe-AajKdGgm4WCCvBqiYyLKh_tdNSH5Y', 'AIzaSyDScRt4CCopvbmvCpv9DQ0fYD1wCghduHk',
-      'AIzaSyBvaBottdBHjiReEXIcYu7BjDpDJDpanKA', 'AIzaSyA5I3VeU9uIQkWqb7iwEtU9e8zM35pr9j0',
-      'AIzaSyALRHmzuJ-jO_Z9qHDIrq27OEgjSjGMYMw', 'AIzaSyDYaRWNJMjWKVAC9KvkvCnBMD9-UM6M2hc',
-      'AIzaSyCzS7VIaXlFcnUzORhZsxRNXOtIelGSND4', 'AIzaSyAfY5HyALrJnPJg13jF-PAMlitkwswZ0_Q',
-      'AIzaSyC5Sr3T1sCyq-lYL1KJOZxdvI43ijON_Bg', 'AIzaSyAJpW3ni-XhScWbu8A7ia9mK_APpbxB5Qg',
-      'AIzaSyAF1kutfxrQp51jB8D-6nFy7NE754v6zYY', 'AIzaSyCEP5U4kGX6k2CiP6YPW-rT2z4dmMUkruk',
-      'AIzaSyBHEW0BTJ_3Fsb2CmTAdYyEiJwZFIF9au0', 'AIzaSyDjVqe3eK3Zi3Wxr4_0jAG3Q-mjDZbMJm4',
-      'AIzaSyCd4uNLzoKb855LKkyLVFysG7ARbjk2GLw', 'AIzaSyCMdl6PrZnz-WrLkLHldeAo0hWDmLhunbI',
-      'AIzaSyB4D4t8G3dOAovKu1H6NxasqCl10SV0qAQ', 'AIzaSyDye2YKhlubLC5qk673fO1oR9JcmyLNWQY',
-      'AIzaSyBkJULuyFkcIZm2VNtVIdrJnwswZ7TOhSo', 'AIzaSyCczn6U2g1_V1dCh3HpTcd4o7et8AN8dBU',
-      'AIzaSyB01AY78Q-QELswFceInH4QXCAahcWWgRQ', 'AIzaSyBF_Me7hyGPrFx4zxmPTxYKRVthvn5WzkU',
-      'AIzaSyCmQblrYpyHyTigs9Y1pXcyS7_kZn8Z8FU', 'AIzaSyCgy20dLWNFQHdEy2n9R-NQv4PokZR6ZVY',
-      'AIzaSyDCC4uozEySlhLHxA3ZQyU9B9CRlfiNOD8', 'AIzaSyA59Gbk2Qu-ruIuy-UXQjGoddAPow_7ZLI',
-      'AIzaSyBj94ubLWE6a3oTzwmDZ7TIJ6LDAdrW4qo', 'AIzaSyBesLNkJuVRk5ngBk0jn729Qty3ZKmNPjo',
-      'AIzaSyCLwS0AKN8UC1mjJr6GJ5F5kRL6QO9c58g', 'AIzaSyDS5KWkDZoakSHbAEVV3JjnqcOxtdqNvLs',
-      'AIzaSyAuOs_zpKbDysa7ThXxF86ejV1Mz8PhHKo', 'AIzaSyBRFr2dwYV-AT_-iF6YMUVireXeh-GYMFA',
-      'AIzaSyBa19RL545bwFsTFyARAPpBtcRvEu1P_5o', 'AIzaSyDKH3zNRNEph7I9ez4Zp78HNB8qJjjDMv4',
-      'AIzaSyCCB2S3pAV8hpeiDyMhAnyDxrQl5gjTNHE', 'AIzaSyDxdxHYI4EcK3SRLXMdrbon4HaAEAo0hFQ',
-      'AIzaSyCzxdThXlHN314kx4VOMlY7OrLfBrZn7ps', 'AIzaSyC2uPNFRF8WevWZFXRcif8y2-2-gAtCyiQ',
-      'AIzaSyCtaVpsQDhKwCw_anh1GtxWkpnBx1PrNmU', 'AIzaSyBobzKWPHIkaudIayB_pIheo5vd5dcI_Co',
-      'AIzaSyDZIebPpdzkCsXDQTNvCPd-Rr4yT10pOhY', 'AIzaSyCZg5v7vHtNQTHp24maN-Wr_H4qaJqO8fI',
-      'AIzaSyAnWffFLAdGMe-w5La_WcTVBtbfUwMzHbo', 'AIzaSyDcSA5lBnFu8sG6k-beulRhw7SeFK4lqyQ',
-      'AIzaSyDYPNDsZWu8au6Yq9qtTkR_3nUmSFy7ZBI', 'AIzaSyAaxRE3_Amg2oFwIOZPSHL3tNwr7lRtdlc',
-      'AIzaSyCQ5AyFHASLqhw-l9akOrTpuOj6itBQ0VU', 'AIzaSyCqcqxGqzBlmC6EgMQzf9nOtpHOW0-oM30',
-      'AIzaSyCtAbPFKD_uKNPJn5eeMg3-ZXJ_EccZdow', 'AIzaSyB0PgW6Uw6090vCW5PdXQNN8XkZ1SLlAEE',
-      'AIzaSyC6RZ4WuDR9ji4uB48_yYJW6hbjB7VWm00', 'AIzaSyDxUKl0NRe5AoR7AzOkJEtCM4TOVQxFFqY',
-      'AIzaSyDrZGM42F3gHnI5HOz51-pr6Q3qh80x38U', 'AIzaSyCvyMU4Gp5BJkTVbyYc3RFWdOnD9e-5fWM',
-      'AIzaSyCb604TCm9Itwtl6fJ3LtmTkKCFEIHZ0cU', 'AIzaSyAOOn2HUSp-SUIOoNHGTm7T9ItriuaB06A'
+    // Keys are now managed via secrets.js or window.APP_SECRETS
+    DEFAULT_AI_KEYS: (window.APP_SECRETS && window.APP_SECRETS.GEMINI_KEYS) || [],
+    OPENROUTER_MODELS: [
+      'stepfun/step-3.5-flash:free',
+      'arcee-ai/trinity-large-preview:free',
+      'nvidia/nemotron-3-super-120b-a12b:free',
+      'nvidia/nemotron-3-nano-30b-a3b:free'
     ],
 
     // AI Backstory (Modified Prompt for detail context)
@@ -345,46 +319,63 @@
 - Bengali Meaning: ${bangla}
 - Language: Pure Bengali only. Tone: Compassionate and scholarly.`;
 
-      // Try user's key first
-      const userKey = localStorage.getItem('geminiKey');
-      if (userKey) {
+      const result = await QuranAPI._robustAICall(prompt);
+      if (result) {
+        setAICache(cacheKey, result);
+        return result;
+      }
+      return "বিস্তারিত লোড করতে সমস্যা হয়েছে। পরে আবার চেষ্টা করুন।";
+    },
+
+    _robustAICall: async (prompt) => {
+      const model = localStorage.getItem('user_gemini_model') || 'gemini-2.5-flash-lite';
+      const userKey = localStorage.getItem('user_gemini_api_key');
+      const userKeysList = JSON.parse(localStorage.getItem('user_gemini_keys_list') || '[]');
+      const orKey = localStorage.getItem('user_openrouter_key') || (window.APP_SECRETS && window.APP_SECRETS.OPENROUTER_KEY) || '';
+
+      const allKeys = [];
+      if (userKey) allKeys.push(userKey);
+      userKeysList.forEach(k => { if (!allKeys.includes(k)) allKeys.push(k); });
+
+      // Shuffle system keys
+      const shuffledSystem = [...QuranAPI.DEFAULT_AI_KEYS].sort(() => 0.5 - Math.random());
+      shuffledSystem.forEach(k => { if (!allKeys.includes(k)) allKeys.push(k); });
+
+      // 1. Try All Gemini Keys
+      for (const key of allKeys) {
         try {
-          const model = localStorage.getItem('geminiModel') || 'gemini-2.5-flash-lite';
-          const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${userKey}`, {
+          const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
           });
-
           const data = await res.json();
-          if (data?.candidates?.[0]?.content?.parts?.[0]?.text) {
-            const result = data.candidates[0].content.parts[0].text;
-            setAICache(cacheKey, result);
-            return result;
-          }
-
+          if (data?.candidates?.[0]?.content?.parts?.[0]?.text) return data.candidates[0].content.parts[0].text;
         } catch (e) { }
       }
 
-      // Try default keys
-      for (const key of QuranAPI.DEFAULT_AI_KEYS) {
-        try {
-          const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${key}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-          });
-
-          const data = await res.json();
-          if (data?.candidates?.[0]?.content?.parts?.[0]?.text) {
-            const result = data.candidates[0].content.parts[0].text;
-            setAICache(cacheKey, result);
-            return result;
-          }
-
-        } catch (e) { continue; }
+      // 2. Fallback to OpenRouter
+      if (orKey) {
+        for (const orModel of QuranAPI.OPENROUTER_MODELS) {
+          try {
+            const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${orKey}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                model: orModel,
+                messages: [{ role: "user", content: prompt }]
+              })
+            });
+            const data = await res.json();
+            if (data.choices?.[0]?.message?.content) return data.choices[0].message.content;
+          } catch (e) { }
+        }
       }
-      return "বিস্তারিত লোড করতে সমস্যা হয়েছে। পরে আবার চেষ্টা করুন।";
+
+      return null;
     }
   };
 
@@ -594,23 +585,10 @@ ${bangla}
 
 সংক্ষিপ্ত উত্তর দাও বাংলায়।`;
 
-      const _shuffledKeys = [...QuranAPI.DEFAULT_AI_KEYS].sort(() => 0.5 - Math.random());
-      for (const key of _shuffledKeys) {
-        try {
-          const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${key}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-          });
-          if (!res.ok) continue;
-
-          const data = await res.json();
-          const result = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-          if (result) {
-            setAICache(cacheKey, result);
-            return result;
-          }
-        } catch (e) { continue; }
+      const result = await QuranAPI._robustAICall(prompt);
+      if (result) {
+        setAICache(cacheKey, result);
+        return result;
       }
       return "AI সার্ভিস সাময়িকভাবে অনুপলব্ধ। পরে আবার চেষ্টা করুন।";
     },
@@ -632,38 +610,10 @@ ${bangla}
 
 উত্তর বাংলায়, গুছিয়ে এবং সুন্দর পয়েন্ট আকারে দেবে।`;
 
-      const userKey = localStorage.getItem('geminiKey');
-      if (userKey) {
-        try {
-          const model = localStorage.getItem('geminiModel') || 'gemini-2.5-flash-lite';
-          const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${userKey}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-          });
-          const data = await res.json();
-          if (data?.candidates?.[0]?.content?.parts?.[0]?.text) {
-            const result = data.candidates[0].content.parts[0].text;
-            setAICache(cacheKey, result);
-            return result;
-          }
-        } catch (e) { }
-      }
-
-      for (const key of QuranAPI.DEFAULT_AI_KEYS) {
-        try {
-          const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${key}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-          });
-          const data = await res.json();
-          if (data?.candidates?.[0]?.content?.parts?.[0]?.text) {
-            const result = data.candidates[0].content.parts[0].text;
-            setAICache(cacheKey, result);
-            return result;
-          }
-        } catch (e) { continue; }
+      const result = await QuranAPI._robustAICall(prompt);
+      if (result) {
+        setAICache(cacheKey, result);
+        return result;
       }
       return "বিস্তারিত ব্যাখ্যা লোড করতে সমস্যা হয়েছে। পরে আবার চেষ্টা করুন।";
     }
